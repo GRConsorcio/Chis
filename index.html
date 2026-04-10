@@ -93,17 +93,16 @@ tfoot td:first-child { text-align: left; padding-left: 20px; letter-spacing: 1px
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import { getDatabase, ref, onValue, set, update } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import { getDatabase, ref, onValue, set } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAStKygESgvDlcqL8AcPd2K6cQLDS4IpuQ",
   authDomain: "ranking-chis.firebaseapp.com",
+  databaseURL: "https://ranking-chis-default-rtdb.firebaseio.com",
   projectId: "ranking-chis",
   storageBucket: "ranking-chis.firebasestorage.app",
   messagingSenderId: "817538775589",
-  appId: "1:817538775589:web:23e5710cad96ef674a1dcc",
-  measurementId: "G-MEFB6WRY5V",
-  databaseURL: "https://ranking-chis-default-rtdb.firebaseio.com"
+  appId: "1:817538775589:web:23e5710cad96ef674a1dcc"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -113,16 +112,14 @@ const dbRef = ref(db, 'equipe_danylo');
 const badge = document.getElementById('syncBadge');
 let config = { mes: "Controle de vendas mensal", semanas: 4, vendedores: ["Vendedor 1","Vendedor 2","Vendedor 3"] };
 let dados = [];
-let ignoreNext = false;
 
-function setSyncOk() { badge.textContent = '● SINCRONIZADO'; badge.className = 'sync-badge ok'; }
-function setSyncErr() { badge.textContent = '● OFFLINE'; badge.className = 'sync-badge err'; }
-function setSyncSaving() { badge.textContent = '● SALVANDO'; badge.className = 'sync-badge'; }
+function setSyncOk()     { badge.textContent = '● SINCRONIZADO'; badge.className = 'sync-badge ok'; }
+function setSyncErr()    { badge.textContent = '● OFFLINE';      badge.className = 'sync-badge err'; }
+function setSyncSaving() { badge.textContent = '● SALVANDO';     badge.className = 'sync-badge'; }
 
 function render() {
   document.getElementById('subtitulo').textContent = config.mes;
   const wrap = document.getElementById('tableWrap');
-
   const sorted = [...dados].sort((a,b) => b.s.reduce((x,y)=>x+y,0) - a.s.reduce((x,y)=>x+y,0));
   const totS = Array(config.semanas).fill(0);
 
@@ -134,7 +131,7 @@ function render() {
   sorted.forEach((v, idx) => {
     const total = v.s.reduce((a,b)=>a+b,0);
     v.s.forEach((val,i) => { if(i<config.semanas) totS[i]+=val; });
-    let cls = idx===0&&total>0?'rank-1':idx===1&&total>0?'rank-2':idx===2&&total>0?'rank-3':'';
+    const cls = idx===0&&total>0?'rank-1':idx===1&&total>0?'rank-2':idx===2&&total>0?'rank-3':'';
     let cells = `<td>${v.nome}</td>`;
     for(let si=0;si<config.semanas;si++) {
       cells += `<td><input type="number" min="0" value="${v.s[si]||0}" data-nome="${v.nome}" data-s="${si}" /></td>`;
@@ -144,9 +141,9 @@ function render() {
   });
 
   let ftds = '<tr><td>Total equipe</td>';
-  let gt=0;
+  let gt = 0;
   for(let i=0;i<config.semanas;i++){ftds+=`<td>${totS[i]}</td>`;gt+=totS[i];}
-  ftds+=`<td class="total-cell">${gt}</td></tr>`;
+  ftds += `<td class="total-cell">${gt}</td></tr>`;
 
   wrap.innerHTML = `<table>${ths}<tbody id="tbody">${trs}</tbody><tfoot>${ftds}</tfoot></table>`;
 
@@ -159,8 +156,8 @@ function render() {
       v.s[si] = parseInt(e.target.value)||0;
       render();
       setSyncSaving();
-      const path = `equipe_danylo/dados/${nome.replace(/[.#$\[\]]/g,'_')}/s`;
-      set(ref(db, path), v.s).then(setSyncOk).catch(setSyncErr);
+      const key = nome.replace(/[.#$\[\]/]/g,'_');
+      set(ref(db, `equipe_danylo/dados/${key}/s`), v.s).then(setSyncOk).catch(setSyncErr);
     });
   });
 }
@@ -170,8 +167,8 @@ onValue(dbRef, snap => {
   if(val) {
     if(val.config) config = val.config;
     if(val.dados) {
-      dados = Object.entries(val.dados).map(([key, d]) => ({
-        nome: d.nome || key,
+      dados = Object.entries(val.dados).map(([, d]) => ({
+        nome: d.nome,
         s: Array.isArray(d.s) ? d.s : Array(config.semanas).fill(0)
       }));
     } else {
@@ -179,11 +176,12 @@ onValue(dbRef, snap => {
     }
   } else {
     dados = config.vendedores.map(n => ({ nome: n, s: Array(config.semanas).fill(0) }));
-    set(dbRef, { config, dados: Object.fromEntries(dados.map(d=>([d.nome.replace(/[.#$\[\]]/g,'_'),d]))) });
+    const dadosObj = Object.fromEntries(dados.map(d => [d.nome.replace(/[.#$\[\]/]/g,'_'), d]));
+    set(dbRef, { config, dados: dadosObj });
   }
   render();
   setSyncOk();
-}, err => { setSyncErr(); });
+}, () => setSyncErr());
 
 window.abrirAdmin = function() {
   document.getElementById('admin-mes').value = config.mes;
@@ -200,9 +198,8 @@ window.abrirAdmin = function() {
 };
 
 window.fecharAdmin = function(e, force) {
-  if(force || (e && e.target===document.getElementById('overlay'))) {
+  if(force || (e && e.target===document.getElementById('overlay')))
     document.getElementById('overlay').classList.remove('open');
-  }
 };
 
 window.addVendedorAdmin = function() {
@@ -245,7 +242,7 @@ window.salvarAdmin = function() {
   document.getElementById('overlay').classList.remove('open');
   setSyncSaving();
 
-  const dadosObj = Object.fromEntries(dados.map(d => ([d.nome.replace(/[.#$\[\]]/g,'_'), d])));
-  set(dbRef, { config, dados: dadosObj }).then(() => { setSyncOk(); render(); }).catch(setSyncErr);
+  const dadosObj = Object.fromEntries(dados.map(d => ([d.nome.replace(/[.#$\[\]/]/g,'_'), d])));
+  set(dbRef, { config, dados: dadosObj }).then(()=>{ setSyncOk(); render(); }).catch(setSyncErr);
 };
 </script>
