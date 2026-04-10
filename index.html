@@ -1,8 +1,100 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Ranking GR - Equipe Chis</title>
+
+<style>
+body {
+  margin:0;
+  font-family: Arial;
+  background:#0b0f1a;
+  color:#fff;
+}
+
+.container {
+  padding:20px;
+}
+
+h1 {
+  text-align:center;
+  color:#d4af37;
+}
+
+.subtitle {
+  text-align:center;
+  color:#aaa;
+}
+
+.sync {
+  text-align:center;
+  margin:10px;
+  font-size:12px;
+}
+
+.ok { color:#22c55e }
+.err { color:#ef4444 }
+
+.card {
+  background:#111827;
+  border-radius:10px;
+  padding:20px;
+  box-shadow:0 0 20px rgba(0,0,0,0.5);
+}
+
+table {
+  width:100%;
+  border-collapse:collapse;
+  margin-top:20px;
+}
+
+th {
+  background:#000;
+  color:#d4af37;
+  padding:10px;
+}
+
+td {
+  padding:10px;
+  text-align:center;
+  border-bottom:1px solid #222;
+}
+
+input {
+  width:60px;
+  background:#000;
+  color:#fff;
+  border:1px solid #333;
+}
+
+.rank1 td:first-child::before { content:"🥇 "; }
+.rank2 td:first-child::before { content:"🥈 "; }
+.rank3 td:first-child::before { content:"🥉 "; }
+
+.total {
+  color:#d4af37;
+  font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>🏆 Ranking GR</h1>
+<div class="subtitle" id="mes"></div>
+<div class="sync" id="status">Carregando...</div>
+
+<div class="card">
+  <div id="tabela"></div>
+</div>
+
+</div>
+
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import { getDatabase, ref, onValue, set } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
-// 🔥 MUDE AQUI APENAS O NOME DA EQUIPE
 const EQUIPE = "equipe_chis";
 
 const firebaseConfig = {
@@ -10,135 +102,77 @@ const firebaseConfig = {
   authDomain: "ranking-chis.firebaseapp.com",
   databaseURL: "https://ranking-chis-default-rtdb.firebaseio.com",
   projectId: "ranking-chis",
-  storageBucket: "ranking-chis.firebasestorage.app",
-  messagingSenderId: "817538775589",
-  appId: "1:817538775589:web:23e5710cad96ef674a1dcc"
 };
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-
-// ✅ AGORA USA VARIÁVEL
 const dbRef = ref(db, EQUIPE);
 
-const badge = document.getElementById('syncBadge');
-let config = { mes: "Controle de vendas mensal", semanas: 4, vendedores: ["Vendedor 1","Vendedor 2","Vendedor 3"] };
+let config = { mes:"Meta mensal", semanas:4, vendedores:["V1","V2","V3"] };
 let dados = [];
 
-function setSyncOk()     { badge.textContent = '● SINCRONIZADO'; badge.className = 'sync-badge ok'; }
-function setSyncErr()    { badge.textContent = '● OFFLINE';      badge.className = 'sync-badge err'; }
-function setSyncSaving() { badge.textContent = '● SALVANDO';     badge.className = 'sync-badge'; }
+function render(){
+  document.getElementById("mes").innerText = config.mes;
 
-function render() {
-  document.getElementById('subtitulo').textContent = config.mes;
-  const wrap = document.getElementById('tableWrap');
-  const sorted = [...dados].sort((a,b) => b.s.reduce((x,y)=>x+y,0) - a.s.reduce((x,y)=>x+y,0));
-  const totS = Array(config.semanas).fill(0);
+  const sorted = [...dados].sort((a,b)=> soma(b)-soma(a));
 
-  let ths = '<thead><tr><th>Vendedor</th>';
-  for(let i=0;i<config.semanas;i++) ths += `<th>Semana ${i+1}</th>`;
-  ths += '<th>Total</th></tr></thead>';
+  let html = "<table><thead><tr><th>Vendedor</th>";
 
-  let trs = '';
-  sorted.forEach((v, idx) => {
-    const total = v.s.reduce((a,b)=>a+b,0);
-    v.s.forEach((val,i) => { if(i<config.semanas) totS[i]+=val; });
-    const cls = idx===0&&total>0?'rank-1':idx===1&&total>0?'rank-2':idx===2&&total>0?'rank-3':'';
-    let cells = `<td>${v.nome}</td>`;
-    for(let si=0;si<config.semanas;si++) {
-      cells += `<td><input type="number" min="0" value="${v.s[si]||0}" data-nome="${v.nome}" data-s="${si}" /></td>`;
+  for(let i=0;i<config.semanas;i++) html += `<th>S${i+1}</th>`;
+
+  html += "<th>Total</th></tr></thead><tbody>";
+
+  sorted.forEach((v,i)=>{
+    const total = soma(v);
+    const cls = i==0?"rank1":i==1?"rank2":i==2?"rank3":"";
+
+    html += `<tr class="${cls}"><td>${v.nome}</td>`;
+
+    for(let s=0;s<config.semanas;s++){
+      html += `<td><input type="number" value="${v.s[s]||0}" data-nome="${v.nome}" data-s="${s}"/></td>`;
     }
-    cells += `<td class="total-cell">${total}</td>`;
-    trs += `<tr class="${cls}">${cells}</tr>`;
+
+    html += `<td class="total">${total}</td></tr>`;
   });
 
-  let ftds = '<tr><td>Total equipe</td>';
-  let gt = 0;
-  for(let i=0;i<config.semanas;i++){ftds+=`<td>${totS[i]}</td>`;gt+=totS[i];}
-  ftds += `<td class="total-cell">${gt}</td></tr>`;
+  html += "</tbody></table>";
 
-  wrap.innerHTML = `<table>${ths}<tbody id="tbody">${trs}</tbody><tfoot>${ftds}</tfoot></table>`;
+  document.getElementById("tabela").innerHTML = html;
 
-  document.querySelectorAll('#tbody input').forEach(inp => {
-    inp.addEventListener('change', e => {
+  document.querySelectorAll("input").forEach(inp=>{
+    inp.onchange = e=>{
       const nome = e.target.dataset.nome;
-      const si = parseInt(e.target.dataset.s);
-      const v = dados.find(x=>x.nome===nome);
-      if(!v) return;
+      const s = e.target.dataset.s;
+      const v = dados.find(x=>x.nome==nome);
+      v.s[s] = parseInt(e.target.value)||0;
 
-      v.s[si] = parseInt(e.target.value)||0;
+      set(ref(db, `${EQUIPE}/dados/${nome}/s`), v.s);
       render();
-      setSyncSaving();
-
-      const key = nome.replace(/[.#$\[\]/]/g,'_');
-
-      // ✅ AGORA USA EQUIPE DINÂMICA
-      set(ref(db, `${EQUIPE}/dados/${key}/s`), v.s)
-        .then(setSyncOk)
-        .catch(setSyncErr);
-    });
+    };
   });
 }
 
-onValue(dbRef, snap => {
+function soma(v){ return v.s.reduce((a,b)=>a+b,0); }
+
+onValue(dbRef, snap=>{
   const val = snap.val();
 
-  if(val) {
-    if(val.config) config = val.config;
+  if(val){
+    config = val.config || config;
+    dados = Object.values(val.dados || {});
+  }else{
+    dados = config.vendedores.map(n=>({nome:n, s:Array(config.semanas).fill(0)}));
 
-    if(val.dados) {
-      dados = Object.entries(val.dados).map(([, d]) => ({
-        nome: d.nome,
-        s: Array.isArray(d.s) ? d.s : Array(config.semanas).fill(0)
-      }));
-    } else {
-      dados = config.vendedores.map(n => ({ nome: n, s: Array(config.semanas).fill(0) }));
-    }
-  } else {
-    dados = config.vendedores.map(n => ({ nome: n, s: Array(config.semanas).fill(0) }));
-
-    const dadosObj = Object.fromEntries(
-      dados.map(d => [d.nome.replace(/[.#$\[\]/]/g,'_'), d])
-    );
-
-    set(dbRef, { config, dados: dadosObj });
+    const obj = Object.fromEntries(dados.map(d=>[d.nome,d]));
+    set(dbRef,{config,dados:obj});
   }
 
   render();
-  setSyncOk();
-}, () => setSyncErr());
+  document.getElementById("status").innerText = "● ONLINE";
+  document.getElementById("status").className = "sync ok";
+});
 
-window.salvarAdmin = function() {
-  const novoMes = document.getElementById('admin-mes').value.trim() || config.mes;
-  const novasSemanas = Math.min(8, Math.max(1, parseInt(document.getElementById('admin-semanas').value)||4));
-
-  const inputs = document.querySelectorAll('#admin-vendedores input[type=text]');
-  const novosNomes = Array.from(inputs).map(inp => inp.value.trim() || 'Vendedor');
-
-  const novosDados = novosNomes.map((nome, i) => {
-    const nomeAntigo = config.vendedores[i];
-    const existing = dados.find(d => d.nome === nomeAntigo) || dados.find(d => d.nome === nome);
-    const s = existing ? [...existing.s] : Array(novasSemanas).fill(0);
-
-    while(s.length < novasSemanas) s.push(0);
-
-    return { nome, s: s.slice(0, novasSemanas) };
-  });
-
-  config.mes = novoMes;
-  config.semanas = novasSemanas;
-  config.vendedores = novosNomes;
-  dados = novosDados;
-
-  setSyncSaving();
-
-  const dadosObj = Object.fromEntries(
-    dados.map(d => ([d.nome.replace(/[.#$\[\]/]/g,'_'), d]))
-  );
-
-  // ✅ JÁ ESTÁ CERTO AQUI
-  set(dbRef, { config, dados: dadosObj })
-    .then(()=>{ setSyncOk(); render(); })
-    .catch(setSyncErr);
-};
 </script>
+
+</body>
+</html>
