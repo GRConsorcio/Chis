@@ -107,7 +107,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
-const dbRef = ref(db, 'equipe_danylo');
+const dbRef = ref(db, 'equipe_chis');
 
 const badge = document.getElementById('syncBadge');
 let config = { mes: "Controle de vendas mensal", semanas: 4, vendedores: ["Vendedor 1","Vendedor 2","Vendedor 3"] };
@@ -157,7 +157,7 @@ function render() {
       render();
       setSyncSaving();
       const key = nome.replace(/[.#$\[\]/]/g,'_');
-      set(ref(db, `equipe_danylo/dados/${key}/s`), v.s).then(setSyncOk).catch(setSyncErr);
+      set(ref(db, `equipe_chis/dados/${key}/s`), v.s).then(setSyncOk).catch(setSyncErr);
     });
   });
 }
