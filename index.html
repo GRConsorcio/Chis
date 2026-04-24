@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ranking — Equipe Chis</title>
+<title>Ranking — Equipe Danylo</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -25,6 +25,7 @@ body{font-family:"Barlow",sans-serif;display:flex;flex-direction:column;}
   --row-even:#161616;
 }
 
+/* LAYOUT */
 .screen{height:100vh;display:flex;flex-direction:column;padding:0.6vh 0.8vw;gap:0.6vh;}
 
 /* HEADER */
@@ -42,6 +43,7 @@ body{font-family:"Barlow",sans-serif;display:flex;flex-direction:column;}
 
 /* LEFT PANEL */
 .left-panel{width:28%;display:flex;flex-direction:column;gap:0.7vh;flex-shrink:0;}
+
 .stat-box{background:var(--surface);border:1px solid rgba(201,168,76,0.2);border-radius:8px;padding:1.2vh 1.2vw;flex:1;display:flex;flex-direction:column;justify-content:space-between;position:relative;overflow:hidden;}
 .stat-box::before{content:"";position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--gold3),var(--gold2),var(--gold3),transparent);}
 .stat-box::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at top left,rgba(201,168,76,0.06) 0%,transparent 60%);}
@@ -72,23 +74,31 @@ body{font-family:"Barlow",sans-serif;display:flex;flex-direction:column;}
 .right-panel{flex:1;display:flex;flex-direction:column;min-width:0;}
 .table-wrap{flex:1;border-radius:8px;overflow:hidden;display:flex;flex-direction:column;border:1px solid rgba(201,168,76,0.15);}
 table{width:100%;border-collapse:collapse;table-layout:fixed;height:100%;}
+
 thead tr{background:#0d0d00;}
-thead th{padding:var(--th-pad,0.8vh 0.5vw);color:var(--gold2);font-family:"Barlow Condensed",sans-serif;font-size:var(--fs-th,1.8vh);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;text-align:center;border:1px solid rgba(201,168,76,0.15);background:#0e0e00;}
+thead th{padding:var(--th-pad, 0.8vh 0.5vw);color:var(--gold2);font-family:"Barlow Condensed",sans-serif;font-size:var(--fs-th,1.8vh);font-weight:700;text-transform:uppercase;letter-spacing:0.1em;text-align:center;border:1px solid rgba(201,168,76,0.15);background:#0e0e00;}
 thead th:first-child{text-align:left;padding-left:1vw;width:34%;}
 thead th.col-total{background:#1a1400;color:var(--gold2);}
+
 tbody tr:nth-child(odd) td{background:var(--row-odd);}
 tbody tr:nth-child(even) td{background:var(--row-even);}
 tbody tr:hover td{background:#2a2200 !important;}
-tbody td{padding:var(--td-pad,0.5vh 0.5vw);color:var(--white);font-size:var(--fs-td,2vh);text-align:center;border:1px solid rgba(201,168,76,0.08);font-weight:600;}
+tbody td{padding:var(--td-pad, 0.5vh 0.5vw);color:var(--white);font-size:var(--fs-td,2vh);text-align:center;border:1px solid rgba(201,168,76,0.08);font-weight:600;}
 tbody td:first-child{text-align:left;padding-left:1vw;font-family:"Barlow Condensed",sans-serif;font-size:var(--fs-name,2.1vh);font-weight:700;text-transform:uppercase;letter-spacing:0.03em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--white);}
 td.col-total{background:#1a1400 !important;color:var(--gold2) !important;font-family:"Barlow Condensed",sans-serif;font-size:var(--fs-total,2.2vh);font-weight:900;border-left:1px solid rgba(201,168,76,0.3);}
+
+/* RANK MEDALS */
 .rank-medal{display:inline-block;margin-right:4px;}
-tfoot tr td{background:#0d0d00 !important;color:var(--gold);font-family:"Barlow Condensed",sans-serif;font-size:var(--fs-th,1.8vh);font-weight:800;text-align:center;border:1px solid rgba(201,168,76,0.15);padding:var(--th-pad,0.8vh 0.5vw);text-transform:uppercase;letter-spacing:0.08em;}
+
+tfoot tr td{background:#0d0d00 !important;color:var(--gold);font-family:"Barlow Condensed",sans-serif;font-size:var(--fs-th,1.8vh);font-weight:800;text-align:center;border:1px solid rgba(201,168,76,0.15);padding:var(--th-pad, 0.8vh 0.5vw);text-transform:uppercase;letter-spacing:0.08em;}
 tfoot tr td:first-child{text-align:left;padding-left:1vw;}
 tfoot td.col-total{background:#1a1400 !important;color:var(--gold2) !important;font-size:var(--fs-total,2.2vh);}
+
+/* number inputs inside cells */
 input[type=number]{background:rgba(0,0,0,0.45);border:1px solid rgba(201,168,76,0.25);color:var(--gold2);width:var(--input-w,4.5vh);padding:0.2vh 0.2vw;text-align:center;border-radius:3px;font-size:var(--fs-td,2vh);font-weight:700;font-family:"Barlow",sans-serif;}
 input[type=number]:focus{outline:none;border-color:var(--gold);}
 input[type=number]::-webkit-inner-spin-button{opacity:0.3;}
+
 .loading{text-align:center;color:rgba(201,168,76,0.4);padding:40px;font-size:1.6vh;letter-spacing:2px;font-family:"Barlow Condensed",sans-serif;}
 
 /* OVERLAY / POPUP */
@@ -122,6 +132,22 @@ input[type=number]::-webkit-inner-spin-button{opacity:0.3;}
 .stat-dia-wrap .stat-number{transition:text-shadow 0.2s;}
 .stat-dia-wrap:hover .stat-number{text-shadow:0 0 40px rgba(201,168,76,0.9);}
 .stat-dia-hint{font-size:1.1vh;color:rgba(201,168,76,0.4);text-align:right;margin-top:2px;letter-spacing:0.05em;font-weight:400;}
+
+/* CLICK-TO-EDIT TOTAL MÊS */
+.stat-mes-wrap{position:relative;z-index:1;cursor:pointer;}
+.stat-mes-wrap .stat-number{transition:text-shadow 0.2s;}
+.stat-mes-wrap:hover .stat-number{text-shadow:0 0 40px rgba(201,168,76,0.9);}
+.stat-mes-hint{font-size:1.1vh;color:rgba(201,168,76,0.4);text-align:right;margin-top:2px;letter-spacing:0.05em;font-weight:400;}
+.stat-mes-input-wrap{display:none;text-align:right;position:relative;z-index:1;}
+.stat-mes-input-wrap.active{display:block;}
+.stat-mes-input{background:transparent;border:none;border-bottom:2px solid var(--gold);color:var(--gold2);font-family:"Barlow Condensed",sans-serif;font-size:9vh;font-weight:900;line-height:1;text-align:right;width:100%;text-shadow:0 0 30px rgba(201,168,76,0.4);outline:none;-moz-appearance:textfield;}
+.stat-mes-input::-webkit-outer-spin-button,.stat-mes-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0;}
+.stat-mes-input::placeholder{color:rgba(201,168,76,0.3);}
+.stat-mes-hint-edit{font-size:1.1vh;color:rgba(201,168,76,0.6);text-align:right;margin-top:2px;letter-spacing:0.05em;font-weight:400;}
+.stat-mes-wrap.editing .stat-number{display:none;}
+.stat-mes-wrap.editing .stat-mes-input-wrap{display:block;}
+.stat-mes-wrap.editing .stat-mes-hint{display:none;}
+
 .dia-popup{position:fixed;z-index:200;background:#111100;border:1px solid rgba(201,168,76,0.4);border-radius:10px;padding:16px 18px;min-width:240px;box-shadow:0 8px 40px rgba(0,0,0,0.8),0 0 20px rgba(201,168,76,0.1);display:none;}
 .dia-popup.open{display:block;}
 .dia-popup-title{font-family:"Barlow Condensed",sans-serif;font-size:13px;font-weight:800;color:var(--gold2);letter-spacing:2px;text-transform:uppercase;margin-bottom:12px;border-bottom:1px solid rgba(201,168,76,0.15);padding-bottom:8px;display:flex;justify-content:space-between;align-items:center;}
@@ -143,7 +169,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:0.3;}
   <!-- HEADER -->
   <div class="header">
     <div class="sync-badge" id="syncBadge">● CONECTANDO</div>
-    <div class="header-title" id="headerTitle">EQUIPE CHIS</div>
+    <div class="header-title" id="headerTitle">EQUIPE DANYLO</div>
     <button class="admin-btn" onclick="abrirAdmin()">⚙ ADMIN</button>
   </div>
 
@@ -171,7 +197,14 @@ input[type=number]::-webkit-inner-spin-button{opacity:0.3;}
           <div class="stat-label">Vendas</div>
           <div class="stat-sub">No mês</div>
         </div>
-        <div class="stat-number" id="stat-mes">–</div>
+        <div class="stat-mes-wrap" id="stat-mes-wrap">
+          <div class="stat-number" id="stat-mes">–</div>
+          <div class="stat-mes-hint">✏️ clique para editar</div>
+          <div class="stat-mes-input-wrap" id="stat-mes-input-wrap">
+            <input type="number" class="stat-mes-input" id="stat-mes-input" min="0" placeholder="0"/>
+            <div class="stat-mes-hint-edit">↵ confirmar &nbsp;·&nbsp; Esc cancelar</div>
+          </div>
+        </div>
         <div class="progress-wrap">
           <div class="progress-track">
             <div class="progress-fill" id="progress-fill" style="width:0%"></div>
@@ -199,7 +232,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:0.3;}
         </div>
       </div>
 
-    </div>
+    </div><!-- /left-panel -->
 
     <!-- RIGHT TABLE -->
     <div class="right-panel">
@@ -208,8 +241,8 @@ input[type=number]::-webkit-inner-spin-button{opacity:0.3;}
       </div>
     </div>
 
-  </div>
-</div>
+  </div><!-- /body -->
+</div><!-- /screen -->
 
 <!-- DAILY EDIT POPUP -->
 <div class="dia-popup" id="dia-popup">
@@ -232,6 +265,9 @@ input[type=number]::-webkit-inner-spin-button{opacity:0.3;}
       <span id="zoom-label">100%</span>
       <button class="zoom-btn" onclick="changeZoom(0.1)">+</button>
     </div>
+
+    <div class="section-label">Nome da equipe</div>
+    <input class="input-full" type="text" id="admin-equipe" placeholder="Ex: Equipe Danylo" />
 
     <div class="section-label">Período / mês</div>
     <input class="input-full" type="text" id="admin-mes" placeholder="Ex: Abril 2025" />
@@ -259,7 +295,6 @@ input[type=number]::-webkit-inner-spin-button{opacity:0.3;}
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
 import{getDatabase,ref,onValue,set}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
-// ── FIREBASE DA EQUIPE CHIS (original, não alterado) ──────────────────────────
 const firebaseConfig={
   apiKey:"AIzaSyAStKygESgvDlcqL8AcPd2K6cQLDS4IpuQ",
   authDomain:"ranking-chis.firebaseapp.com",
@@ -270,23 +305,27 @@ const firebaseConfig={
   measurementId:"G-MEFB6WRY5V",
   databaseURL:"https://ranking-chis-default-rtdb.firebaseio.com"
 };
+
 const app=initializeApp(firebaseConfig);
 const db=getDatabase(app);
 const dbRef=ref(db,'equipe_chis');
-// ─────────────────────────────────────────────────────────────────────────────
-
 const badge=document.getElementById('syncBadge');
 
 let config={
+  equipe:"Equipe Danylo",
   mes:"Controle de vendas mensal",
   semanas:4,
   meta:100,
+  vendas_dia:0,
   conversao:0,
   vendedores:["Vendedor 1","Vendedor 2","Vendedor 3"]
 };
 let dados=[];
-let snapDia={};
-let cotasDia={};
+// vendas_dia_snap: { nomeKey: { data: "YYYY-MM-DD", valor: N } }
+// Guarda quanto cada vendedor tinha acumulado nas semanas no início do dia.
+// Vendas do dia = total_semanas_atual - snapshot_inicio_dia
+let snapDia={}; // { nomeKey: { data, base } }  base = total semanas no início do dia
+let cotasDia={}; // { nomeKey: { data, extra } }  extra = cotas manuais adicionadas no dia
 
 function setSyncOk(){badge.textContent='● SINCRONIZADO';badge.className='sync-badge ok';}
 function setSyncErr(){badge.textContent='● OFFLINE';badge.className='sync-badge err';}
@@ -294,7 +333,7 @@ function setSyncSaving(){badge.textContent='● SALVANDO';badge.className='sync-
 
 function dataHoje(){
   const d=new Date();
-  return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 }
 function nomeKey(nome){return nome.replace(/[.#$\[\]]/g,'_');}
 
@@ -303,45 +342,45 @@ function getCotaDia(nome){
   const e=cotasDia[k];
   return(e&&e.data===dataHoje())?e.extra||0:0;
 }
+
 function salvarCotaDia(nome,extra){
   const k=nomeKey(nome);
   const d=dataHoje();
   extra=Math.max(0,extra);
   cotasDia[k]={data:d,extra,nome};
   setSyncSaving();
-  set(ref(db,`equipe_chis/cotasDia/${k}`),{data:d,extra,nome}).then(setSyncOk).catch(setSyncErr);
+  set(ref(db,`equipe_chis/cotasDia/${k}`),{data:d,extra,nome})
+    .then(setSyncOk).catch(setSyncErr);
 }
+
 function inicializarCotasDia(snapVal){
   const d=dataHoje();
   if(!snapVal)return;
   Object.entries(snapVal).forEach(([k,v])=>{
-    cotasDia[k]=(v.data===d)?v:{data:d,extra:0,nome:v.nome||k};
+    if(v.data===d) cotasDia[k]=v;
+    else cotasDia[k]={data:d,extra:0,nome:v.nome||k};
   });
 }
 
+// Retorna quantas vendas um vendedor fez HOJE (total atual - base do início do dia + cotas manuais)
 function vendasHojeVendedor(v){
   const k=nomeKey(v.nome);
   const totalAtual=v.s.reduce((a,b)=>a+b,0);
   const entry=snapDia[k];
-  let fromSemanas=0;
-  if(!entry||entry.data!==dataHoje()){
-    const base=totalAtual;
-    snapDia[k]={data:dataHoje(),base};
-    set(ref(db,`equipe_chis/snapDia/${k}`),{data:dataHoje(),base,nome:v.nome}).catch(()=>{});
-  }else{
-    fromSemanas=Math.max(0,totalAtual-entry.base);
-  }
-  return fromSemanas+getCotaDia(v.nome);
+  if(!entry||entry.data!==dataHoje()) return getCotaDia(v.nome);
+  return Math.max(0,totalAtual-entry.base)+getCotaDia(v.nome);
 }
 
+// Ao carregar: verifica snapshots antigos e renova para hoje
 function inicializarSnapDia(snapVal){
   const d=dataHoje();
   dados.forEach(v=>{
     const k=nomeKey(v.nome);
     const entry=snapVal?.[k];
     if(entry&&entry.data===d){
-      snapDia[k]=entry;
+      snapDia[k]=entry; // snapshot válido de hoje
     }else{
+      // Novo dia ou sem snapshot: salva base atual
       const base=v.s.reduce((a,b)=>a+b,0);
       snapDia[k]={data:d,base};
       set(ref(db,`equipe_chis/snapDia/${k}`),{data:d,base,nome:v.nome}).catch(()=>{});
@@ -349,10 +388,11 @@ function inicializarSnapDia(snapVal){
   });
 }
 
+// Reset à meia-noite: atualiza o snapshot base para o total atual
 function agendarResetMeiaNoite(){
   const agora=new Date();
   const meianoite=new Date(agora);
-  meianoite.setHours(24,0,5,0);
+  meianoite.setHours(24,0,5,0); // 5s após meia-noite
   const ms=meianoite-agora;
   setTimeout(()=>{
     const d=dataHoje();
@@ -360,9 +400,7 @@ function agendarResetMeiaNoite(){
       const k=nomeKey(v.nome);
       const base=v.s.reduce((a,b)=>a+b,0);
       snapDia[k]={data:d,base};
-      cotasDia[k]={data:d,extra:0,nome:v.nome};
       set(ref(db,`equipe_chis/snapDia/${k}`),{data:d,base,nome:v.nome}).catch(()=>{});
-      set(ref(db,`equipe_chis/cotasDia/${k}`),{data:d,extra:0,nome:v.nome}).catch(()=>{});
     });
     render();
     agendarResetMeiaNoite();
@@ -370,9 +408,10 @@ function agendarResetMeiaNoite(){
 }
 
 function render(){
-  document.getElementById('headerTitle').textContent='EQUIPE CHIS — '+config.mes;
+  document.getElementById('headerTitle').textContent=(config.equipe||"Equipe").toUpperCase()+" — "+config.mes;
 
-  const totalMes=dados.reduce((s,v)=>s+v.s.reduce((a,b)=>a+b,0),0);
+  const totalVendedores=dados.reduce((s,v)=>s+v.s.reduce((a,b)=>a+b,0),0);
+  const totalMes=totalVendedores+(config.cotasFantasma||0);
   const totalDia=dados.reduce((s,v)=>s+vendasHojeVendedor(v),0);
   const meta=config.meta||100;
   const pct=Math.min(100,Math.round(totalMes/meta*100));
@@ -387,13 +426,14 @@ function render(){
   const conv=parseFloat(config.conversao)||0;
   document.getElementById('stat-conv').textContent=conv.toFixed(2).replace('.',',');
 
+  // Table
   const wrap=document.getElementById('tableWrap');
   const sorted=[...dados].sort((a,b)=>b.s.reduce((x,y)=>x+y,0)-a.s.reduce((x,y)=>x+y,0));
   const totS=Array(config.semanas).fill(0);
   const medals=['🥇','🥈','🥉'];
 
   let ths='<thead><tr><th>Vendedor(a)</th>';
-  for(let i=0;i<config.semanas;i++)ths+=`<th>Semana ${i+1}</th>`;
+  for(let i=0;i<config.semanas;i++) ths+=`<th>Semana ${i+1}</th>`;
   ths+='<th class="col-total">Total</th></tr></thead>';
 
   let trs='';
@@ -412,9 +452,11 @@ function render(){
   let ftds='<tr><td>TOTAL</td>';
   let gt=0;
   for(let i=0;i<config.semanas;i++){ftds+=`<td>${totS[i]}</td>`;gt+=totS[i];}
+  gt+=(config.cotasFantasma||0);
   ftds+=`<td class="col-total">${gt}</td></tr>`;
 
   wrap.innerHTML=`<table>${ths}<tbody id="tbody">${trs}</tbody><tfoot>${ftds}</tfoot></table>`;
+
   if(window._setNumVendedores)window._setNumVendedores(sorted.length);
 
   document.querySelectorAll('#tbody input[data-s]').forEach(inp=>{
@@ -424,44 +466,211 @@ function render(){
       const v=dados.find(x=>x.nome===nome);
       if(!v)return;
       v.s[si]=parseInt(e.target.value)||0;
-      render();
+
+      // Atualiza totais visíveis sem recriar a tabela
+      const novoTotal=v.s.reduce((a,b)=>a+b,0);
+      const totalVendedores=dados.reduce((s,d)=>s+d.s.reduce((a,b)=>a+b,0),0);
+      const totalMes=totalVendedores+(config.cotasFantasma||0);
+      const row=e.target.closest('tr');
+      if(row){const tc=row.querySelector('.col-total');if(tc)tc.textContent=novoTotal;}
+      const totS=Array(config.semanas).fill(0);
+      dados.forEach(d=>{d.s.forEach((val,i)=>{if(i<config.semanas)totS[i]+=val;});});
+      document.querySelectorAll('tfoot td:not(:first-child):not(.col-total)').forEach((td,i)=>{td.textContent=totS[i]||0;});
+      const gtCell=document.querySelector('tfoot .col-total');
+      if(gtCell)gtCell.textContent=totS.reduce((a,b)=>a+b,0)+(config.cotasFantasma||0);
+      document.getElementById('stat-mes').textContent=totalMes;
+      const meta=config.meta||100;
+      const pct=Math.min(100,Math.round(totalMes/meta*100));
+      document.getElementById('progress-fill').style.width=pct+'%';
+      document.getElementById('progress-pct').textContent=pct+'%';
+
+      salvandoLocal=true;
       setSyncSaving();
-      set(ref(db,`equipe_chis/dados/${nomeKey(nome)}/s`),v.s).then(setSyncOk).catch(setSyncErr);
+      set(ref(db,`equipe_chis/dados/${nomeKey(nome)}/s`),v.s)
+        .then(()=>{salvandoLocal=false;setSyncOk();})
+        .catch(()=>{salvandoLocal=false;setSyncErr();});
     });
   });
 }
+
+let salvandoLocal=false;
+
+// Listener dedicado para cotasDia — atualiza stat-dia em todos os dispositivos
+onValue(ref(db,'equipe_chis/cotasDia'),snap=>{
+  inicializarCotasDia(snap.val()||null);
+  if(dados.length>0){
+    const totalDia=dados.reduce((s,v)=>s+vendasHojeVendedor(v),0);
+    document.getElementById('stat-dia').textContent=totalDia;
+  }
+});
 
 onValue(dbRef,snap=>{
   const val=snap.val();
   if(val){
     if(val.config)config={...config,...val.config};
     if(val.dados){
-      dados=Object.entries(val.dados).map(([key,d])=>({
-        nome:d.nome||key,
-        s:Array.isArray(d.s)?d.s:Array(config.semanas).fill(0)
-      }));
+      if(!salvandoLocal){
+        dados=Object.entries(val.dados).map(([key,d])=>({
+          nome:d.nome||key,
+          s:Array.isArray(d.s)?d.s:Array(config.semanas).fill(0)
+        }));
+      }
     }else{
       dados=config.vendedores.map(n=>({nome:n,s:Array(config.semanas).fill(0)}));
     }
     inicializarSnapDia(val.snapDia||null);
-    inicializarCotasDia(val.cotasDia||null);
+    if(val.cotasDia)inicializarCotasDia(val.cotasDia);
   }else{
     dados=config.vendedores.map(n=>({nome:n,s:Array(config.semanas).fill(0)}));
     set(dbRef,{config,dados:Object.fromEntries(dados.map(d=>[nomeKey(d.nome),d]))});
     inicializarSnapDia(null);
   }
-  render();setSyncOk();
+  const activeEl=document.activeElement;
+  const editandoTabela=activeEl&&activeEl.tagName==='INPUT'&&activeEl.dataset.s!==undefined;
+  if(!salvandoLocal&&!editandoTabela){render();}else{
+    const totalDia=dados.reduce((s,v)=>s+vendasHojeVendedor(v),0);
+    document.getElementById('stat-dia').textContent=totalDia;
+  }
+  setSyncOk();
 },()=>setSyncErr());
 
 agendarResetMeiaNoite();
 
+// ─── POPUP COTAS DO DIA ────────────────────────────────────────────────────
+function abrirDiaPopup(){
+  const popup=document.getElementById('dia-popup');
+  const rows=document.getElementById('dia-popup-rows');
+  const trigger=document.getElementById('stat-dia-box');
+  const rect=trigger.getBoundingClientRect();
+
+  // Posiciona o popup à direita da caixa
+  popup.style.top=rect.top+'px';
+  popup.style.left=(rect.right+10)+'px';
+
+  // Garante que não saia da tela
+  popup.style.display='block';
+  const pw=popup.offsetWidth;
+  const ph=popup.offsetHeight;
+  if(rect.right+10+pw>window.innerWidth){
+    popup.style.left=Math.max(4,rect.left-pw-10)+'px';
+  }
+  if(rect.top+ph>window.innerHeight){
+    popup.style.top=Math.max(4,window.innerHeight-ph-8)+'px';
+  }
+
+  renderDiaRows();
+  popup.classList.add('open');
+}
+
+function renderDiaRows(){
+  const rows=document.getElementById('dia-popup-rows');
+  const sorted=[...dados].sort((a,b)=>b.s.reduce((x,y)=>x+y,0)-a.s.reduce((x,y)=>x+y,0));
+  rows.innerHTML=sorted.map(v=>{
+    const extra=getCotaDia(v.nome);
+    const k=nomeKey(v.nome);
+    return`<div class="dia-row">
+      <span class="dia-name">${v.nome}</span>
+      <div class="dia-controls">
+        <button class="dia-btn" data-nome="${v.nome}" data-op="-1">−</button>
+        <span class="dia-val" id="dv-${k}">${extra}</span>
+        <button class="dia-btn" data-nome="${v.nome}" data-op="+1">+</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  rows.querySelectorAll('.dia-btn').forEach(btn=>{
+    btn.addEventListener('click',e=>{
+      const nome=btn.dataset.nome;
+      const op=parseInt(btn.dataset.op);
+      const novoExtra=Math.max(0,getCotaDia(nome)+op);
+      salvarCotaDia(nome,novoExtra);
+      document.getElementById('dv-'+nomeKey(nome)).textContent=novoExtra;
+      // Atualiza painel esquerdo sem re-render completo
+      const totalDia=dados.reduce((s,v)=>s+vendasHojeVendedor(v),0);
+      document.getElementById('stat-dia').textContent=totalDia;
+    });
+  });
+}
+
+document.getElementById('stat-dia-trigger').addEventListener('click',abrirDiaPopup);
+document.getElementById('dia-popup-close').addEventListener('click',()=>{
+  document.getElementById('dia-popup').classList.remove('open');
+  document.getElementById('dia-popup').style.display='none';
+});
+// Fecha ao clicar fora
+document.addEventListener('click',e=>{
+  const popup=document.getElementById('dia-popup');
+  const trigger=document.getElementById('stat-dia-trigger');
+  if(popup.classList.contains('open')&&!popup.contains(e.target)&&!trigger.contains(e.target)){
+    popup.classList.remove('open');
+    popup.style.display='none';
+  }
+});
+
+// ─── CLICK-TO-EDIT TOTAL DO MÊS ───────────────────────────────────────────
+(function(){
+  const wrap=document.getElementById('stat-mes-wrap');
+  const display=document.getElementById('stat-mes');
+  const inputWrap=document.getElementById('stat-mes-input-wrap');
+  const inp=document.getElementById('stat-mes-input');
+  let originalValue=0;
+
+  function openEdit(){
+    originalValue=parseInt(display.textContent)||0;
+    inp.value=originalValue;
+    wrap.classList.add('editing');
+    requestAnimationFrame(()=>{inp.focus();inp.select();});
+  }
+
+  function confirmEdit(){
+    const raw=parseInt(inp.value);
+    if(isNaN(raw)||raw<0){cancelEdit();return;}
+    wrap.classList.remove('editing');
+
+    // Calcula total real dos vendedores (sem cotas fantasma)
+    const totalVendedores=dados.reduce((s,v)=>s+v.s.reduce((a,b)=>a+b,0),0);
+    const diff=raw-totalVendedores;
+
+    // Salva como cotas fantasma — diferença entre o valor digitado e o total real dos vendedores
+    config.cotasFantasma=raw-totalVendedores;
+    // Garante que não fique negativo além do que os vendedores têm
+    if(config.cotasFantasma+totalVendedores<0) config.cotasFantasma=-totalVendedores;
+
+    render();
+    setSyncSaving();
+    set(ref(db,'equipe_chis/config'),config).then(setSyncOk).catch(setSyncErr);
+  }
+
+  function cancelEdit(){
+    wrap.classList.remove('editing');
+    render();
+  }
+
+  wrap.addEventListener('click',e=>{
+    if(!wrap.classList.contains('editing'))openEdit();
+  });
+
+  inp.addEventListener('keydown',e=>{
+    if(e.key==='Enter'){e.preventDefault();confirmEdit();}
+    else if(e.key==='Escape'){e.preventDefault();cancelEdit();}
+    e.stopPropagation();
+  });
+
+  inp.addEventListener('blur',()=>{
+    if(wrap.classList.contains('editing'))confirmEdit();
+  });
+
+  inp.addEventListener('click',e=>e.stopPropagation());
+})();
+
 window.salvarMeta=function(){
   config.meta=Math.max(1,parseInt(document.getElementById('meta-input').value)||100);
   render();setSyncSaving();
-  set(ref(db,'equipe_chis/config'),config).then(setSyncOk).catch(setSyncErr);
+  set(ref(db,'equipe_chis/config'),config).then(()=>{setSyncOk();}).catch(setSyncErr);
 };
 
 window.abrirAdmin=function(){
+  document.getElementById('admin-equipe').value=config.equipe||'';
   document.getElementById('admin-mes').value=config.mes||'';
   document.getElementById('admin-conv').value=config.conversao??0;
   document.getElementById('admin-semanas').value=config.semanas;
@@ -501,6 +710,7 @@ window.removerVendedor=function(idx){
 };
 
 window.salvarAdmin=function(){
+  const novaEquipe=document.getElementById('admin-equipe').value.trim()||config.equipe;
   const novoMes=document.getElementById('admin-mes').value.trim()||config.mes;
   const novaConv=parseFloat(document.getElementById('admin-conv').value)||0;
   const novasSemanas=Math.min(8,Math.max(1,parseInt(document.getElementById('admin-semanas').value)||4));
@@ -515,7 +725,7 @@ window.salvarAdmin=function(){
     return{nome,s:s.slice(0,novasSemanas)};
   });
 
-  config={...config,mes:novoMes,conversao:novaConv,semanas:novasSemanas,vendedores:novosNomes};
+  config={...config,equipe:novaEquipe,mes:novoMes,conversao:novaConv,semanas:novasSemanas,vendedores:novosNomes};
   dados=novosDados;
   document.getElementById('overlay').classList.remove('open');
   setSyncSaving();
@@ -536,62 +746,6 @@ window.zerarHoje=function(){
   });
   render();setSyncOk();
 };
-
-// ─── POPUP COTAS DO DIA ───────────────────────────────────────────────────────
-function abrirDiaPopup(){
-  const popup=document.getElementById('dia-popup');
-  const trigger=document.getElementById('stat-dia-box');
-  const rect=trigger.getBoundingClientRect();
-  popup.style.top=rect.top+'px';
-  popup.style.left=(rect.right+10)+'px';
-  popup.style.display='block';
-  const pw=popup.offsetWidth,ph=popup.offsetHeight;
-  if(rect.right+10+pw>window.innerWidth) popup.style.left=Math.max(4,rect.left-pw-10)+'px';
-  if(rect.top+ph>window.innerHeight) popup.style.top=Math.max(4,window.innerHeight-ph-8)+'px';
-  renderDiaRows();
-  popup.classList.add('open');
-}
-
-function renderDiaRows(){
-  const rows=document.getElementById('dia-popup-rows');
-  const sorted=[...dados].sort((a,b)=>b.s.reduce((x,y)=>x+y,0)-a.s.reduce((x,y)=>x+y,0));
-  rows.innerHTML=sorted.map(v=>{
-    const extra=getCotaDia(v.nome);
-    const k=nomeKey(v.nome);
-    return`<div class="dia-row">
-      <span class="dia-name">${v.nome}</span>
-      <div class="dia-controls">
-        <button class="dia-btn" data-nome="${v.nome}" data-op="-1">−</button>
-        <span class="dia-val" id="dv-${k}">${extra}</span>
-        <button class="dia-btn" data-nome="${v.nome}" data-op="+1">+</button>
-      </div>
-    </div>`;
-  }).join('');
-  rows.querySelectorAll('.dia-btn').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      const nome=btn.dataset.nome;
-      const op=parseInt(btn.dataset.op);
-      const novoExtra=Math.max(0,getCotaDia(nome)+op);
-      salvarCotaDia(nome,novoExtra);
-      document.getElementById('dv-'+nomeKey(nome)).textContent=novoExtra;
-      const totalDia=dados.reduce((s,v)=>s+vendasHojeVendedor(v),0);
-      document.getElementById('stat-dia').textContent=totalDia;
-    });
-  });
-}
-
-document.getElementById('stat-dia-trigger').addEventListener('click',abrirDiaPopup);
-document.getElementById('dia-popup-close').addEventListener('click',()=>{
-  const p=document.getElementById('dia-popup');
-  p.classList.remove('open');p.style.display='none';
-});
-document.addEventListener('click',e=>{
-  const popup=document.getElementById('dia-popup');
-  const trigger=document.getElementById('stat-dia-trigger');
-  if(popup.classList.contains('open')&&!popup.contains(e.target)&&!trigger.contains(e.target)){
-    popup.classList.remove('open');popup.style.display='none';
-  }
-});
 </script>
 
 <script>
