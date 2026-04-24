@@ -348,9 +348,11 @@ function salvarCotaDia(nome,extra){
   const d=dataHoje();
   extra=Math.max(0,extra);
   cotasDia[k]={data:d,extra,nome};
+  salvandoCotaDia=true;
   setSyncSaving();
   set(ref(db,`equipe_chis/cotasDia/${k}`),{data:d,extra,nome})
-    .then(setSyncOk).catch(setSyncErr);
+    .then(()=>{salvandoCotaDia=false;setSyncOk();})
+    .catch(()=>{salvandoCotaDia=false;setSyncErr();});
 }
 
 function inicializarCotasDia(snapVal){
@@ -494,10 +496,11 @@ function render(){
 }
 
 let salvandoLocal=false;
+let salvandoCotaDia=false;
 
 // Listener dedicado para cotasDia — atualiza stat-dia em todos os dispositivos
 onValue(ref(db,'equipe_chis/cotasDia'),snap=>{
-  inicializarCotasDia(snap.val()||null);
+  if(!salvandoCotaDia) inicializarCotasDia(snap.val()||null);
   if(dados.length>0){
     const totalDia=dados.reduce((s,v)=>s+vendasHojeVendedor(v),0);
     document.getElementById('stat-dia').textContent=totalDia;
@@ -519,7 +522,7 @@ onValue(dbRef,snap=>{
       dados=config.vendedores.map(n=>({nome:n,s:Array(config.semanas).fill(0)}));
     }
     inicializarSnapDia(val.snapDia||null);
-    if(val.cotasDia)inicializarCotasDia(val.cotasDia);
+    // cotasDia gerenciado pelo listener dedicado acima
   }else{
     dados=config.vendedores.map(n=>({nome:n,s:Array(config.semanas).fill(0)}));
     set(dbRef,{config,dados:Object.fromEntries(dados.map(d=>[nomeKey(d.nome),d]))});
