@@ -348,17 +348,18 @@ function salvarCotaDia(nome,extra){
   const d=dataHoje();
   extra=Math.max(0,extra);
   cotasDia[k]={data:d,extra,nome};
-  salvandoCotaDia=true;
   setSyncSaving();
   set(ref(db,`equipe_chis/cotasDia/${k}`),{data:d,extra,nome})
-    .then(()=>{salvandoCotaDia=false;setSyncOk();})
-    .catch(()=>{salvandoCotaDia=false;setSyncErr();});
+    .then(()=>{setSyncOk();})
+    .catch(()=>{setSyncErr();});
 }
 
 function inicializarCotasDia(snapVal){
   const d=dataHoje();
   if(!snapVal)return;
   Object.entries(snapVal).forEach(([k,v])=>{
+    // Sempre atualiza com dados do Firebase, mesmo se estiver salvando localmente
+    // Isso garante que outros dispositivos vejam as mudanças em tempo real
     if(v.data===d) cotasDia[k]=v;
     else cotasDia[k]={data:d,extra:0,nome:v.nome||k};
   });
@@ -378,15 +379,23 @@ function inicializarSnapDia(snapVal){
   const d=dataHoje();
   dados.forEach(v=>{
     const k=nomeKey(v.nome);
+
+    // 1. Se já temos um snapshot válido de hoje em memória, NUNCA sobrescreve.
+    //    Isso evita que atualizações de outros dispositivos resetem o "delta do dia".
+    if(snapDia[k]&&snapDia[k].data===d) return;
+
+    // 2. Se o Firebase tem um snapshot válido de hoje, usa ele.
     const entry=snapVal?.[k];
     if(entry&&entry.data===d){
-      snapDia[k]=entry; // snapshot válido de hoje
-    }else{
-      // Novo dia ou sem snapshot: salva base atual
-      const base=v.s.reduce((a,b)=>a+b,0);
-      snapDia[k]={data:d,base};
-      set(ref(db,`equipe_chis/snapDia/${k}`),{data:d,base,nome:v.nome}).catch(()=>{});
+      snapDia[k]=entry;
+      return;
     }
+
+    // 3. Só cria novo snapshot (e salva no Firebase) se não existe nenhum válido de hoje.
+    //    Isso acontece apenas no primeiro acesso do dia ou em novos dispositivos.
+    const base=v.s.reduce((a,b)=>a+b,0);
+    snapDia[k]={data:d,base};
+    set(ref(db,`equipe_chis/snapDia/${k}`),{data:d,base,nome:v.nome}).catch(()=>{});
   });
 }
 
@@ -496,14 +505,18 @@ function render(){
 }
 
 let salvandoLocal=false;
-let salvandoCotaDia=false;
 
-// Listener dedicado para cotasDia — atualiza stat-dia em todos os dispositivos
+// Listener dedicado para cotasDia — atualiza stat-dia em TODOS os dispositivos em tempo real
 onValue(ref(db,'equipe_chis/cotasDia'),snap=>{
-  if(!salvandoCotaDia) inicializarCotasDia(snap.val()||null);
+  inicializarCotasDia(snap.val()||null);
   if(dados.length>0){
     const totalDia=dados.reduce((s,v)=>s+vendasHojeVendedor(v),0);
     document.getElementById('stat-dia').textContent=totalDia;
+    // Se o popup estiver aberto, re-renderiza para refletir mudanças de outros dispositivos
+    const popup=document.getElementById('dia-popup');
+    if(popup&&popup.classList.contains('open')){
+      renderDiaRows();
+    }
   }
 });
 
@@ -534,6 +547,9 @@ onValue(dbRef,snap=>{
     const totalDia=dados.reduce((s,v)=>s+vendasHojeVendedor(v),0);
     document.getElementById('stat-dia').textContent=totalDia;
   }
+  // Re-renderiza o popup do dia se estiver aberto (para TV/outros dispositivos verem atualizações)
+  const diaPopup=document.getElementById('dia-popup');
+  if(diaPopup&&diaPopup.classList.contains('open')){renderDiaRows();}
   setSyncOk();
 },()=>setSyncErr());
 
