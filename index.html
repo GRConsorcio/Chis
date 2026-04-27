@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ranking — Equipe Danylo</title>
+<title>Ranking — Equipe Chis</title>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -169,7 +169,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:0.3;}
   <!-- HEADER -->
   <div class="header">
     <div class="sync-badge" id="syncBadge">● CONECTANDO</div>
-    <div class="header-title" id="headerTitle">EQUIPE DANYLO</div>
+    <div class="header-title" id="headerTitle">EQUIPE CHIS</div>
     <button class="admin-btn" onclick="abrirAdmin()">⚙ ADMIN</button>
   </div>
 
@@ -267,7 +267,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:0.3;}
     </div>
 
     <div class="section-label">Nome da equipe</div>
-    <input class="input-full" type="text" id="admin-equipe" placeholder="Ex: Equipe Danylo" />
+    <input class="input-full" type="text" id="admin-equipe" placeholder="Ex: Equipe Chis" />
 
     <div class="section-label">Período / mês</div>
     <input class="input-full" type="text" id="admin-mes" placeholder="Ex: Abril 2025" />
@@ -312,7 +312,7 @@ const dbRef=ref(db,'equipe_chis');
 const badge=document.getElementById('syncBadge');
 
 let config={
-  equipe:"Equipe Danylo",
+  equipe:"Equipe Chis",
   mes:"Controle de vendas mensal",
   semanas:4,
   meta:100,
@@ -321,9 +321,6 @@ let config={
   vendedores:["Vendedor 1","Vendedor 2","Vendedor 3"]
 };
 let dados=[];
-// vendas_dia_snap: { nomeKey: { data: "YYYY-MM-DD", valor: N } }
-// Guarda quanto cada vendedor tinha acumulado nas semanas no início do dia.
-// Vendas do dia = total_semanas_atual - snapshot_inicio_dia
 let snapDia={}; // { nomeKey: { data, base } }  base = total semanas no início do dia
 let cotasDia={}; // { nomeKey: { data, extra } }  extra = cotas manuais adicionadas no dia
 
@@ -350,16 +347,13 @@ function salvarCotaDia(nome,extra){
   cotasDia[k]={data:d,extra,nome};
   setSyncSaving();
   set(ref(db,`equipe_chis/cotasDia/${k}`),{data:d,extra,nome})
-    .then(()=>{setSyncOk();})
-    .catch(()=>{setSyncErr();});
+    .then(setSyncOk).catch(setSyncErr);
 }
 
 function inicializarCotasDia(snapVal){
   const d=dataHoje();
   if(!snapVal)return;
   Object.entries(snapVal).forEach(([k,v])=>{
-    // Sempre atualiza com dados do Firebase, mesmo se estiver salvando localmente
-    // Isso garante que outros dispositivos vejam as mudanças em tempo real
     if(v.data===d) cotasDia[k]=v;
     else cotasDia[k]={data:d,extra:0,nome:v.nome||k};
   });
@@ -370,40 +364,45 @@ function vendasHojeVendedor(v){
   const k=nomeKey(v.nome);
   const totalAtual=v.s.reduce((a,b)=>a+b,0);
   const entry=snapDia[k];
-  if(!entry||entry.data!==dataHoje()) return getCotaDia(v.nome);
-  return Math.max(0,totalAtual-entry.base)+getCotaDia(v.nome);
+  let fromSemanas=0;
+  if(!entry||entry.data!==dataHoje()){
+    const base=totalAtual;
+    snapDia[k]={data:dataHoje(),base};
+    set(ref(db,`equipe_chis/snapDia/${k}`),{data:dataHoje(),base,nome:v.nome}).catch(()=>{});
+  }else{
+    fromSemanas=Math.max(0,totalAtual-entry.base);
+  }
+  return fromSemanas+getCotaDia(v.nome);
 }
 
-// Ao carregar: verifica snapshots antigos e renova para hoje
+// Ao carregar: verifica snapshots e aplica — NUNCA sobrescreve snapshot válido de hoje em memória
 function inicializarSnapDia(snapVal){
   const d=dataHoje();
   dados.forEach(v=>{
     const k=nomeKey(v.nome);
 
-    // 1. Se já temos um snapshot válido de hoje em memória, NUNCA sobrescreve.
-    //    Isso evita que atualizações de outros dispositivos resetem o "delta do dia".
+    // 1. Se já temos snapshot válido de hoje em memória, nunca sobrescreve
     if(snapDia[k]&&snapDia[k].data===d) return;
 
-    // 2. Se o Firebase tem um snapshot válido de hoje, usa ele.
+    // 2. Se o Firebase tem snapshot válido de hoje, usa ele
     const entry=snapVal?.[k];
     if(entry&&entry.data===d){
       snapDia[k]=entry;
       return;
     }
 
-    // 3. Só cria novo snapshot (e salva no Firebase) se não existe nenhum válido de hoje.
-    //    Isso acontece apenas no primeiro acesso do dia ou em novos dispositivos.
+    // 3. Só cria novo snapshot se não existe nenhum válido de hoje
     const base=v.s.reduce((a,b)=>a+b,0);
     snapDia[k]={data:d,base};
     set(ref(db,`equipe_chis/snapDia/${k}`),{data:d,base,nome:v.nome}).catch(()=>{});
   });
 }
 
-// Reset à meia-noite: atualiza o snapshot base para o total atual
+// Reset à meia-noite
 function agendarResetMeiaNoite(){
   const agora=new Date();
   const meianoite=new Date(agora);
-  meianoite.setHours(24,0,5,0); // 5s após meia-noite
+  meianoite.setHours(24,0,5,0);
   const ms=meianoite-agora;
   setTimeout(()=>{
     const d=dataHoje();
@@ -477,115 +476,82 @@ function render(){
       const v=dados.find(x=>x.nome===nome);
       if(!v)return;
       v.s[si]=parseInt(e.target.value)||0;
-
-      // Atualiza totais visíveis sem recriar a tabela
-      const novoTotal=v.s.reduce((a,b)=>a+b,0);
-      const totalVendedores=dados.reduce((s,d)=>s+d.s.reduce((a,b)=>a+b,0),0);
-      const totalMes=totalVendedores+(config.cotasFantasma||0);
-      const row=e.target.closest('tr');
-      if(row){const tc=row.querySelector('.col-total');if(tc)tc.textContent=novoTotal;}
-      const totS=Array(config.semanas).fill(0);
-      dados.forEach(d=>{d.s.forEach((val,i)=>{if(i<config.semanas)totS[i]+=val;});});
-      document.querySelectorAll('tfoot td:not(:first-child):not(.col-total)').forEach((td,i)=>{td.textContent=totS[i]||0;});
-      const gtCell=document.querySelector('tfoot .col-total');
-      if(gtCell)gtCell.textContent=totS.reduce((a,b)=>a+b,0)+(config.cotasFantasma||0);
-      document.getElementById('stat-mes').textContent=totalMes;
-      const meta=config.meta||100;
-      const pct=Math.min(100,Math.round(totalMes/meta*100));
-      document.getElementById('progress-fill').style.width=pct+'%';
-      document.getElementById('progress-pct').textContent=pct+'%';
-
-      salvandoLocal=true;
+      render();
       setSyncSaving();
-      set(ref(db,`equipe_chis/dados/${nomeKey(nome)}/s`),v.s)
-        .then(()=>{salvandoLocal=false;setSyncOk();})
-        .catch(()=>{salvandoLocal=false;setSyncErr();});
+      set(ref(db,`equipe_chis/dados/${nomeKey(nome)}/s`),v.s).then(setSyncOk).catch(setSyncErr);
     });
   });
 }
 
 let salvandoLocal=false;
 
-// ─── BOOT SEGURO ──────────────────────────────────────────────────────────────
+// ─── BOOT SEGURO ───────────────────────────────────────────────────────────────
 // Carrega snapDia diretamente do servidor ANTES de ligar os listeners.
-// Isso evita que o cache local do Firebase crie um snapshot errado na recarga.
+// Evita que o cache local do Firebase crie snapshot errado na recarga da página.
 get(ref(db,'equipe_chis/snapDia')).then(snapSnap=>{
   const snapDiaServidor=snapSnap.val()||{};
   const d=dataHoje();
-  // Pré-carrega snapshots válidos de hoje na memória antes do onValue disparar
   Object.entries(snapDiaServidor).forEach(([k,v])=>{
     if(v&&v.data===d) snapDia[k]=v;
   });
   iniciarListeners();
 }).catch(()=>{
-  // Se falhar (offline), inicia assim mesmo — o onValue vai lidar
   iniciarListeners();
 });
 
 function iniciarListeners(){
 
-onValue(ref(db,'equipe_chis/cotasDia'),snap=>{
-  inicializarCotasDia(snap.val()||null);
-  if(dados.length>0){
-    const totalDia=dados.reduce((s,v)=>s+vendasHojeVendedor(v),0);
-    document.getElementById('stat-dia').textContent=totalDia;
-    // Se o popup estiver aberto, re-renderiza para refletir mudanças de outros dispositivos
-    const popup=document.getElementById('dia-popup');
-    if(popup&&popup.classList.contains('open')){
-      renderDiaRows();
+  // Listener dedicado para cotasDia — atualiza stat-dia em todos os dispositivos em tempo real
+  onValue(ref(db,'equipe_chis/cotasDia'),snap=>{
+    inicializarCotasDia(snap.val()||null);
+    if(dados.length>0){
+      const totalDia=dados.reduce((s,v)=>s+vendasHojeVendedor(v),0);
+      document.getElementById('stat-dia').textContent=totalDia;
+      const popup=document.getElementById('dia-popup');
+      if(popup&&popup.classList.contains('open')) renderDiaRows();
     }
-  }
-});
+  });
 
-onValue(dbRef,snap=>{
-  const val=snap.val();
-  if(val){
-    if(val.config)config={...config,...val.config};
-    if(val.dados){
-      if(!salvandoLocal){
-        dados=Object.entries(val.dados).map(([key,d])=>({
-          nome:d.nome||key,
-          s:Array.isArray(d.s)?d.s:Array(config.semanas).fill(0)
-        }));
+  onValue(dbRef,snap=>{
+    const val=snap.val();
+    if(val){
+      if(val.config)config={...config,...val.config};
+      if(val.dados){
+        if(!salvandoLocal){
+          dados=Object.entries(val.dados).map(([key,d])=>({
+            nome:d.nome||key,
+            s:Array.isArray(d.s)?d.s:Array(config.semanas).fill(0)
+          }));
+        }
+      }else{
+        dados=config.vendedores.map(n=>({nome:n,s:Array(config.semanas).fill(0)}));
       }
+      inicializarSnapDia(val.snapDia||null);
+      inicializarCotasDia(val.cotasDia||null);
     }else{
       dados=config.vendedores.map(n=>({nome:n,s:Array(config.semanas).fill(0)}));
+      set(dbRef,{config,dados:Object.fromEntries(dados.map(d=>[nomeKey(d.nome),d]))});
+      inicializarSnapDia(null);
     }
-    inicializarSnapDia(val.snapDia||null);
-    // cotasDia gerenciado pelo listener dedicado acima
-  }else{
-    dados=config.vendedores.map(n=>({nome:n,s:Array(config.semanas).fill(0)}));
-    set(dbRef,{config,dados:Object.fromEntries(dados.map(d=>[nomeKey(d.nome),d]))});
-    inicializarSnapDia(null);
-  }
-  const activeEl=document.activeElement;
-  const editandoTabela=activeEl&&activeEl.tagName==='INPUT'&&activeEl.dataset.s!==undefined;
-  if(!salvandoLocal&&!editandoTabela){render();}else{
-    const totalDia=dados.reduce((s,v)=>s+vendasHojeVendedor(v),0);
-    document.getElementById('stat-dia').textContent=totalDia;
-  }
-  // Re-renderiza o popup do dia se estiver aberto (para TV/outros dispositivos verem atualizações)
-  const diaPopup=document.getElementById('dia-popup');
-  if(diaPopup&&diaPopup.classList.contains('open')){renderDiaRows();}
-  setSyncOk();
-},()=>setSyncErr());
+    render();
+    const diaPopup=document.getElementById('dia-popup');
+    if(diaPopup&&diaPopup.classList.contains('open')) renderDiaRows();
+    setSyncOk();
+  },()=>setSyncErr());
 
-agendarResetMeiaNoite();
+  agendarResetMeiaNoite();
 
 } // fim iniciarListeners
 
 // ─── POPUP COTAS DO DIA ────────────────────────────────────────────────────
 function abrirDiaPopup(){
   const popup=document.getElementById('dia-popup');
-  const rows=document.getElementById('dia-popup-rows');
   const trigger=document.getElementById('stat-dia-box');
   const rect=trigger.getBoundingClientRect();
 
-  // Posiciona o popup à direita da caixa
   popup.style.top=rect.top+'px';
   popup.style.left=(rect.right+10)+'px';
 
-  // Garante que não saia da tela
   popup.style.display='block';
   const pw=popup.offsetWidth;
   const ph=popup.offsetHeight;
@@ -623,7 +589,6 @@ function renderDiaRows(){
       const novoExtra=Math.max(0,getCotaDia(nome)+op);
       salvarCotaDia(nome,novoExtra);
       document.getElementById('dv-'+nomeKey(nome)).textContent=novoExtra;
-      // Atualiza painel esquerdo sem re-render completo
       const totalDia=dados.reduce((s,v)=>s+vendasHojeVendedor(v),0);
       document.getElementById('stat-dia').textContent=totalDia;
     });
@@ -635,7 +600,6 @@ document.getElementById('dia-popup-close').addEventListener('click',()=>{
   document.getElementById('dia-popup').classList.remove('open');
   document.getElementById('dia-popup').style.display='none';
 });
-// Fecha ao clicar fora
 document.addEventListener('click',e=>{
   const popup=document.getElementById('dia-popup');
   const trigger=document.getElementById('stat-dia-trigger');
@@ -665,13 +629,8 @@ document.addEventListener('click',e=>{
     if(isNaN(raw)||raw<0){cancelEdit();return;}
     wrap.classList.remove('editing');
 
-    // Calcula total real dos vendedores (sem cotas fantasma)
     const totalVendedores=dados.reduce((s,v)=>s+v.s.reduce((a,b)=>a+b,0),0);
-    const diff=raw-totalVendedores;
-
-    // Salva como cotas fantasma — diferença entre o valor digitado e o total real dos vendedores
     config.cotasFantasma=raw-totalVendedores;
-    // Garante que não fique negativo além do que os vendedores têm
     if(config.cotasFantasma+totalVendedores<0) config.cotasFantasma=-totalVendedores;
 
     render();
