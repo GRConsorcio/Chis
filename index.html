@@ -293,7 +293,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:0.3;}
 
 <script type="module">
 import{initializeApp}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-import{getDatabase,ref,onValue,set}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+import{getDatabase,ref,onValue,set,get}from'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
 
 const firebaseConfig={
   apiKey:"AIzaSyAStKygESgvDlcqL8AcPd2K6cQLDS4IpuQ",
@@ -506,7 +506,24 @@ function render(){
 
 let salvandoLocal=false;
 
-// Listener dedicado para cotasDia — atualiza stat-dia em TODOS os dispositivos em tempo real
+// ─── BOOT SEGURO ──────────────────────────────────────────────────────────────
+// Carrega snapDia diretamente do servidor ANTES de ligar os listeners.
+// Isso evita que o cache local do Firebase crie um snapshot errado na recarga.
+get(ref(db,'equipe_chis/snapDia')).then(snapSnap=>{
+  const snapDiaServidor=snapSnap.val()||{};
+  const d=dataHoje();
+  // Pré-carrega snapshots válidos de hoje na memória antes do onValue disparar
+  Object.entries(snapDiaServidor).forEach(([k,v])=>{
+    if(v&&v.data===d) snapDia[k]=v;
+  });
+  iniciarListeners();
+}).catch(()=>{
+  // Se falhar (offline), inicia assim mesmo — o onValue vai lidar
+  iniciarListeners();
+});
+
+function iniciarListeners(){
+
 onValue(ref(db,'equipe_chis/cotasDia'),snap=>{
   inicializarCotasDia(snap.val()||null);
   if(dados.length>0){
@@ -554,6 +571,8 @@ onValue(dbRef,snap=>{
 },()=>setSyncErr());
 
 agendarResetMeiaNoite();
+
+} // fim iniciarListeners
 
 // ─── POPUP COTAS DO DIA ────────────────────────────────────────────────────
 function abrirDiaPopup(){
