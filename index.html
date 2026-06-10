@@ -385,12 +385,18 @@ function inicializarSnapDia(snapVal){
     const k=nomeKey(v.nome);
     const entry=snapVal?.[k];
     if(entry&&entry.data===d){
-      snapDia[k]=entry; // snapshot válido de hoje
+      // Snapshot de hoje já existe — usa sem modificar
+      snapDia[k]=entry;
     }else{
-      // Novo dia ou sem snapshot: salva base atual
+      // Sem snapshot de hoje: só grava na memória local
+      // NÃO regrava no Firebase — o CRM pode ter gravado o snapBase
+      // correto (pré-venda) logo antes de incrementar o s[].
+      // Só grava no Firebase se não existe entrada alguma (primeiro uso).
       const base=v.s.reduce((a,b)=>a+b,0);
       snapDia[k]={data:d,base};
-      set(ref(db,`equipe_danylo/snapDia/${k}`),{data:d,base,nome:v.nome}).catch(()=>{});
+      if(!entry){
+        set(ref(db,`equipe_danylo/snapDia/${k}`),{data:d,base,nome:v.nome}).catch(()=>{});
+      }
     }
   });
 }
