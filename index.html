@@ -276,6 +276,7 @@ input[type=number]::-webkit-inner-spin-button{opacity:0.3;}
     <input class="input-full" type="number" id="admin-conv" min="0" step="0.01" placeholder="Ex: 2.24" />
 
     <div class="section-label">Ações</div>
+    <button onclick="repararSnapDiaHoje()" style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.35);color:#e8c86a;padding:8px;width:100%;border-radius:4px;cursor:pointer;font-size:13px;margin-bottom:8px;font-family:'Roboto',sans-serif;font-weight:600;letter-spacing:1px;">🔧 REPARAR VENDAS DO DIA</button>
     <button onclick="zerarHoje()" style="background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);color:#f87171;padding:8px;width:100%;border-radius:4px;cursor:pointer;font-size:13px;margin-bottom:8px;font-family:'Barlow',sans-serif;font-weight:600;letter-spacing:1px;">🔄 ZERAR VENDAS DO DIA AGORA</button>
 
     <div class="section-label">Número de semanas</div>
@@ -283,6 +284,10 @@ input[type=number]::-webkit-inner-spin-button{opacity:0.3;}
       <input type="number" id="admin-semanas" min="1" max="8" value="4" />
       <span style="color:rgba(255,255,255,0.5);font-size:13px">semanas (máx. 8)</span>
     </div>
+
+    <div class="section-label">Ajuste Manual — Vendas do Dia</div>
+    <div id="admin-ajuste-dia" style="margin-bottom:8px;"></div>
+    <button onclick="aplicarAjusteDia()" style="background:rgba(201,168,76,0.12);border:1px solid rgba(201,168,76,0.35);color:#e8c86a;padding:8px;width:100%;border-radius:4px;cursor:pointer;font-size:13px;margin-bottom:12px;font-family:'Roboto',sans-serif;font-weight:600;letter-spacing:1px;">✓ APLICAR AJUSTE</button>
 
     <div class="section-label">Vendedores</div>
     <div id="admin-vendedores"></div>
@@ -331,10 +336,7 @@ function setSyncOk(){badge.textContent='● SINCRONIZADO';badge.className='sync-
 function setSyncErr(){badge.textContent='● OFFLINE';badge.className='sync-badge err';}
 function setSyncSaving(){badge.textContent='● SALVANDO';badge.className='sync-badge';}
 
-function dataHoje(){
-  const d=new Date();
-  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-}
+function dataHoje(){return new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).split('/').reverse().join('-');}
 function nomeKey(nome){return nome.replace(/[.#$\[\]]/g,'_');}
 
 function getCotaDia(nome){
@@ -367,11 +369,19 @@ function vendasHojeVendedor(v){
   const k=nomeKey(v.nome);
   const totalAtual=v.s.reduce((a,b)=>a+b,0);
   const entry=snapDia[k];
+  const hoje=dataHoje();
   let fromSemanas=0;
-  if(!entry||entry.data!==dataHoje()){
-    const base=totalAtual;
-    snapDia[k]={data:dataHoje(),base};
-    set(ref(db,`equipe_danylo/snapDia/${k}`),{data:dataHoje(),base,nome:v.nome}).catch(()=>{});
+  if(!entry){
+    // Nunca teve snapshot — cria com o total atual como base (0 vendas do dia)
+    snapDia[k]={data:hoje,base:totalAtual};
+    set(ref(db,`equipe_danylo/snapDia/${k}`),{data:hoje,base:totalAtual,nome:v.nome}).catch(()=>{});
+  }else if(entry.data!==hoje){
+    // Snapshot de dia anterior: cria novo para hoje
+    // IMPORTANTE: não usa totalAtual como base pois pode já incluir vendas de hoje
+    // gravadas pelo CRM antes do ranking recarregar.
+    const novaBase=totalAtual;
+    snapDia[k]={data:hoje,base:novaBase};
+    set(ref(db,`equipe_danylo/snapDia/${k}`),{data:hoje,base:novaBase,nome:v.nome}).catch(()=>{});
   }else{
     fromSemanas=Math.max(0,totalAtual-entry.base);
   }
@@ -381,12 +391,20 @@ function vendasHojeVendedor(v){
 // Ao carregar: verifica snapshots antigos e renova para hoje
 function inicializarSnapDia(snapVal){
   const d=dataHoje();
+  // Data UTC de hoje — aceita como equivalente para compatibilidade com snapDias
+  // gravados antes da correção de fuso horário (ou por algum cliente sem fuso BRT)
+  const dUTC=new Date().toISOString().slice(0,10);
   dados.forEach(v=>{
     const k=nomeKey(v.nome);
     const entry=snapVal?.[k];
-    if(entry&&entry.data===d){
-      // Snapshot de hoje já existe — usa sem modificar
-      snapDia[k]=entry;
+    const entryEhHoje = entry && (entry.data===d || entry.data===dUTC);
+    if(entryEhHoje){
+      // Snapshot válido de hoje — usa sem modificar, normaliza a data para BRT
+      snapDia[k]={...entry, data:d};
+      // Se estava em UTC, migra silenciosamente para BRT no Firebase
+      if(entry.data===dUTC && entry.data!==d){
+        set(ref(db,`equipe_danylo/snapDia/${k}`),{...entry,data:d}).catch(()=>{});
+      }
     }else{
       // Sem snapshot de hoje: só grava na memória local
       // NÃO regrava no Firebase — o CRM pode ter gravado o snapBase
@@ -656,6 +674,7 @@ window.abrirAdmin=function(){
     row.innerHTML=`<input type="text" value="${n}" data-idx="${i}" placeholder="Nome do vendedor"/><button class="del-btn" onclick="removerVendedor(${i})">✕</button>`;
     cont.appendChild(row);
   });
+  renderAjusteDia();
   document.getElementById('overlay').classList.add('open');
 };
 
@@ -705,6 +724,95 @@ window.salvarAdmin=function(){
   setSyncSaving();
   const dadosObj=Object.fromEntries(dados.map(d=>[nomeKey(d.nome),d]));
   set(dbRef,{config,dados:dadosObj}).then(()=>{setSyncOk();render();}).catch(setSyncErr);
+};
+
+window.repararSnapDiaHoje=function(){
+  // Recalcula o snapDia correto sem zerar vendas.
+  // Lógica: a base deve ser (total atual - vendas de hoje).
+  // Vendas de hoje = o que o snapDia antigo registrou como diferença.
+  // Se o snapDia antigo tem data errada (UTC), ele contém a base de ontem —
+  // então a base correta é o valor que estava no snapDia antigo (entry.base).
+  const d = dataHoje();
+  let reparados = 0;
+
+  dados.forEach(v=>{
+    const k = nomeKey(v.nome);
+    const totalAtual = v.s.reduce((a,b)=>a+b,0);
+    const entry = snapDia[k];
+
+    let baseCorreta;
+
+    if(!entry){
+      // Nunca teve snap — base = total (0 vendas do dia)
+      baseCorreta = totalAtual;
+    } else if(entry.data === d){
+      // Snap já está correto para hoje em BRT — não mexe
+      console.log(`[Reparo] ${v.nome}: snap já correto (base=${entry.base}, vendas hoje=${totalAtual-entry.base})`);
+      return;
+    } else {
+      // Snap de dia anterior (UTC ou ontem) — a base dele é o total de ontem.
+      // As vendas de hoje = totalAtual - entry.base
+      baseCorreta = entry.base;
+      console.log(`[Reparo] ${v.nome}: era data="${entry.data}", corrigindo para "${d}" | base=${baseCorreta} | vendas hoje recuperadas=${totalAtual-baseCorreta}`);
+    }
+
+    snapDia[k] = {data:d, base:baseCorreta, nome:v.nome};
+    set(ref(db,`equipe_danylo/snapDia/${k}`),{data:d,base:baseCorreta,nome:v.nome}).catch(()=>{});
+    reparados++;
+  });
+
+  render();
+  setSyncOk();
+  alert(`Reparo concluído! ${reparados} vendedor(es) corrigido(s).\nAs vendas do dia foram recuperadas.`);
+};
+
+// ── Renderiza ajuste manual de vendas do dia ──
+function renderAjusteDia(){
+  const cont = document.getElementById('admin-ajuste-dia');
+  if(!cont) return;
+  const d = dataHoje();
+  cont.innerHTML = '';
+  if(!dados.length){ cont.innerHTML='<div style="color:#555;font-size:12px;padding:4px 0;">Nenhum vendedor carregado.</div>'; return; }
+  dados.forEach(v=>{
+    const k = nomeKey(v.nome);
+    const totalAtual = v.s.reduce((a,b)=>a+b,0);
+    const entry = snapDia[k];
+    const vendasHoje = (entry && entry.data===d) ? Math.max(0,totalAtual-entry.base) : 0;
+    const row = document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;margin-bottom:6px;';
+    row.innerHTML=`
+      <span style="flex:1;font-size:12px;color:#ccc;font-family:'Roboto',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${v.nome}</span>
+      <span style="font-size:11px;color:#666;min-width:60px;text-align:right;">atual: ${vendasHoje}</span>
+      <input type="number" min="0" max="99" value="${vendasHoje}"
+        data-key="${k}" data-nome="${v.nome}"
+        style="width:52px;background:rgba(0,0,0,0.5);border:1px solid rgba(201,168,76,0.3);color:#e8c86a;
+               padding:5px 6px;border-radius:4px;font-size:13px;font-family:'Roboto',sans-serif;font-weight:700;text-align:center;">
+    `;
+    cont.appendChild(row);
+  });
+}
+
+window.aplicarAjusteDia=function(){
+  const inputs = document.querySelectorAll('#admin-ajuste-dia input[type=number]');
+  if(!inputs.length){ alert('Nenhum vendedor para ajustar.'); return; }
+  const d = dataHoje();
+  let alterados = 0;
+  inputs.forEach(inp=>{
+    const k = inp.dataset.key;
+    const nome = inp.dataset.nome;
+    const vendasCorrigidas = parseInt(inp.value)||0;
+    const vend = dados.find(v=>nomeKey(v.nome)===k);
+    if(!vend) return;
+    const totalAtual = vend.s.reduce((a,b)=>a+b,0);
+    // base = totalAtual - vendas que queremos mostrar como "hoje"
+    const novaBase = Math.max(0, totalAtual - vendasCorrigidas);
+    snapDia[k] = {data:d, base:novaBase, nome};
+    set(ref(db,`equipe_danylo/snapDia/${k}`),{data:d,base:novaBase,nome}).catch(()=>{});
+    alterados++;
+  });
+  render();
+  setSyncOk();
+  alert(`Ajuste aplicado para ${alterados} vendedor(es)!`);
 };
 
 window.zerarHoje=function(){
