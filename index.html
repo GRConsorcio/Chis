@@ -74,8 +74,8 @@ body{font-family:"Roboto",sans-serif;display:flex;flex-direction:column;font-wei
 .progress-pct{font-size:1.7vh;color:var(--gold);font-weight:700;text-align:right;font-family:"Roboto Condensed",sans-serif;}
 
 /* CONVERSION */
-.conv-number{font-family:"Roboto Condensed",sans-serif;font-size:5.6vh;font-weight:700;color:var(--blue-text);line-height:1;text-align:right;position:relative;z-index:1;}
-.conv-unit{font-size:1.7vh;font-weight:600;vertical-align:super;margin-left:2px;color:var(--blue-text);}
+.conv-number{font-family:"Roboto Condensed",sans-serif;font-size:5.6vh;font-weight:700;color:var(--gold);line-height:1;text-align:right;position:relative;z-index:1;}
+.conv-unit{font-size:1.7vh;font-weight:600;vertical-align:super;margin-left:2px;color:var(--gold);}
 
 /* META INPUT */
 .meta-row{display:flex;align-items:center;gap:6px;margin-top:0.4vh;position:relative;z-index:1;}
@@ -265,7 +265,7 @@ body.edit-mode .stat-mes-wrap{cursor:pointer;}
           <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg>
         </div>
         <div class="stat-mes-wrap" id="stat-mes-wrap">
-          <div class="stat-number c-blue" id="stat-mes">–</div>
+          <div class="stat-number c-gold" id="stat-mes">–</div>
           <div class="stat-mes-hint edit-only">clique para editar</div>
           <div class="stat-mes-input-wrap" id="stat-mes-input-wrap">
             <input type="number" class="stat-mes-input" id="stat-mes-input" min="0" placeholder="0"/>
@@ -1009,18 +1009,18 @@ function recalcFontSizes(){
   const r=document.documentElement;
   const baseFs=8;
   r.style.setProperty('--fs-td',    baseFs+'vh');
-  r.style.setProperty('--fs-name',  (baseFs*1.15)+'vh');
+  r.style.setProperty('--fs-name',  (baseFs*1.4)+'vh');
   r.style.setProperty('--fs-total', (baseFs*1.25)+'vh');
-  r.style.setProperty('--fs-th',    (baseFs*0.9)+'vh');
+  r.style.setProperty('--fs-th',    (baseFs*1.1)+'vh');
   r.style.setProperty('--td-pad',   (baseFs*0.3)+'vh 0.6vw');
   r.style.setProperty('--th-pad',   (baseFs*0.35)+'vh 0.6vw');
   const medidoPx=table.getBoundingClientRect().height;
   if(!medidoPx)return;
   const scale=Math.min(4, (availPx/medidoPx)*zoomFactor);
   r.style.setProperty('--fs-td',    Math.max(1.4, baseFs*scale)+'vh');
-  r.style.setProperty('--fs-name',  Math.max(1.6, baseFs*1.15*scale)+'vh');
+  r.style.setProperty('--fs-name',  Math.max(1.6, baseFs*1.4*scale)+'vh');
   r.style.setProperty('--fs-total', Math.max(1.6, baseFs*1.25*scale)+'vh');
-  r.style.setProperty('--fs-th',    Math.max(1.2, baseFs*0.9*scale)+'vh');
+  r.style.setProperty('--fs-th',    Math.max(1.2, baseFs*1.1*scale)+'vh');
   r.style.setProperty('--input-w',  Math.max(4.5, baseFs*2.2*scale)+'vh');
   r.style.setProperty('--td-pad',   Math.max(0.35, baseFs*0.3*scale)+'vh 0.6vw');
   r.style.setProperty('--th-pad',   Math.max(0.4, baseFs*0.35*scale)+'vh 0.6vw');
