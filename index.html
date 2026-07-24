@@ -604,6 +604,16 @@ function render(){
   const meta=config.meta||100;
   const pct=Math.min(100,Math.round(totalMes/meta*100));
 
+  // BUGFIX: o painel "Geral" (que agrega Chis+Luiz) só LÊ equipe_danylo/config/
+  // vendas_dia — ele não recalcula "vendas do dia" sozinho. Esse board sempre
+  // computou totalDia só na tela local, sem nunca gravar de volta no Firebase,
+  // então o Geral ficava travado no valor inicial (0). Só grava quando muda,
+  // e já atualiza o config local antes, pra não reacionar o listener em loop.
+  if(config.vendas_dia !== totalDia){
+    config.vendas_dia = totalDia;
+    set(ref(db,'equipe_danylo/config/vendas_dia'), totalDia).catch(()=>{});
+  }
+
   document.getElementById('stat-dia').textContent=totalDia;
   document.getElementById('stat-mes').textContent=totalMes;
   document.getElementById('progress-fill').style.width=pct+'%';
