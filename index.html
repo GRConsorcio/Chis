@@ -381,7 +381,7 @@ body.edit-mode .stat-mes-wrap{cursor:pointer;}
     <input class="input-full" type="text" id="admin-mes" placeholder="Ex: Abril 2025" />
 
     <div class="section-label">Taxa de conversão (%)</div>
-    <input class="input-full" type="number" id="admin-conv" min="0" step="0.01" placeholder="Ex: 2.24" />
+    <div style="font-size:13px;color:var(--gray);padding:8px 0 4px;">Calculada automaticamente a partir do CRM (vendas aprovadas ÷ leads recebidos pela equipe) — não precisa mais digitar.</div>
 
     <div class="section-label">Ações</div>
     <button onclick="repararSnapDiaHoje()" style="background:rgba(201,168,76,0.1);border:1px solid rgba(201,168,76,0.35);color:#e8c86a;padding:8px;width:100%;border-radius:8px;cursor:pointer;font-size:13px;margin-bottom:8px;font-family:'Roboto',sans-serif;font-weight:600;letter-spacing:1px;">🔧 REPARAR VENDAS DO DIA</button>
@@ -428,6 +428,29 @@ const app=initializeApp(firebaseConfig);
 const db=getDatabase(app);
 const dbRef=ref(db,'equipe_danylo');
 const badge=document.getElementById('syncBadge');
+
+// ── CONVERSÃO AUTOMÁTICA (vendas aprovadas / leads recebidos, direto do CRM) ──
+// Antes esse número era digitado à mão (admin-conv). Agora busca ao vivo no
+// Supabase do CRM, usando o mesmo critério do KPI "Conversão" de lá:
+// fechados (vendas Aprovado dos membros da equipe) / leads da equipe.
+const CRM_SUPA_URL='https://prquggwhjcvenzuziaox.supabase.co';
+const CRM_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBycXVnZ3doamN2ZW56dXppYW94Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyMTUzMDUsImV4cCI6MjA5Mzc5MTMwNX0.vjbVhGIUowS6AGE1Uf5uDutCMI193mhgra3GSwlqMec';
+const CRM_RANK_SECRET='gr_rank_conv_4d8f21b7c6a93e0f5b1d8a2c7e9f0364b8a15d72';
+let _convAuto=null;
+let _convAutoEquipeCache=null;
+async function atualizarConversaoAutomatica(nomeEquipe){
+  if(!nomeEquipe) return;
+  try{
+    const resp=await fetch(CRM_SUPA_URL+'/rest/v1/rpc/rank_conversao_equipe',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','apikey':CRM_ANON_KEY,'Authorization':'Bearer '+CRM_ANON_KEY},
+      body:JSON.stringify({p_nome_equipe:nomeEquipe,p_secret:CRM_RANK_SECRET})
+    });
+    const data=await resp.json();
+    if(data && !data.error) _convAuto=data.conversao_pct;
+  }catch(e){ console.warn('[conversão automática] erro:',e.message); }
+  render();
+}
 
 let config={
   equipe:"Equipe Danylo",
@@ -588,7 +611,7 @@ function render(){
   document.getElementById('progress-pct').textContent=pct+'%';
   document.getElementById('meta-input').value=meta;
 
-  const conv=parseFloat(config.conversao)||0;
+  const conv=_convAuto!==null?_convAuto:0;
   document.getElementById('stat-conv').textContent=conv.toFixed(2).replace('.',',');
 
   // Table
@@ -663,7 +686,10 @@ function render(){
 onValue(dbRef,snap=>{
   const val=snap.val();
   if(val){
-    if(val.config)config={...config,...val.config};
+    if(val.config){
+      config={...config,...val.config};
+      if(config.equipe!==_convAutoEquipeCache){ _convAutoEquipeCache=config.equipe; atualizarConversaoAutomatica(config.equipe); }
+    }
     if(val.dados){
       dados=Object.entries(val.dados).map(([key,d])=>({
         nome:d.nome||key,
@@ -683,6 +709,9 @@ onValue(dbRef,snap=>{
 },()=>setSyncErr());
 
 agendarResetMeiaNoite();
+// Reconsulta a conversão automática periodicamente — as vendas/leads no CRM
+// mudam ao longo do dia e essa tela normalmente fica aberta num monitor.
+setInterval(()=>{ if(config.equipe) atualizarConversaoAutomatica(config.equipe); }, 5*60*1000);
 
 // ─── POPUP COTAS DO DIA ────────────────────────────────────────────────────
 function abrirDiaPopup(){
@@ -832,7 +861,6 @@ window.toggleEditMode=function(){
 window.abrirAdmin=function(){
   document.getElementById('admin-equipe').value=config.equipe||'';
   document.getElementById('admin-mes').value=config.mes||'';
-  document.getElementById('admin-conv').value=config.conversao??0;
   document.getElementById('admin-semanas').value=config.semanas;
   const cont=document.getElementById('admin-vendedores');
   cont.innerHTML='';
@@ -873,7 +901,6 @@ window.removerVendedor=function(idx){
 window.salvarAdmin=function(){
   const novaEquipe=document.getElementById('admin-equipe').value.trim()||config.equipe;
   const novoMes=document.getElementById('admin-mes').value.trim()||config.mes;
-  const novaConv=parseFloat(document.getElementById('admin-conv').value)||0;
   const novasSemanas=Math.min(8,Math.max(1,parseInt(document.getElementById('admin-semanas').value)||4));
   const inputs=document.querySelectorAll('#admin-vendedores input[type=text]');
   const novosNomes=Array.from(inputs).map(inp=>inp.value.trim()||'Vendedor');
@@ -886,7 +913,7 @@ window.salvarAdmin=function(){
     return{nome,s:s.slice(0,novasSemanas)};
   });
 
-  config={...config,equipe:novaEquipe,mes:novoMes,conversao:novaConv,semanas:novasSemanas,vendedores:novosNomes};
+  config={...config,equipe:novaEquipe,mes:novoMes,semanas:novasSemanas,vendedores:novosNomes};
   dados=novosDados;
   document.getElementById('overlay').classList.remove('open');
   setSyncSaving();
