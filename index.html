@@ -595,9 +595,29 @@ function setSyncErr(){badge.textContent='● OFFLINE';badge.className='sync-badg
 function setSyncSaving(){badge.textContent='● SALVANDO';badge.className='sync-badge';}
 
 function dataHoje(){return new Date().toLocaleDateString('pt-BR',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).split('/').reverse().join('-');}
-function nomeKey(nome){return nome.replace(/[.#$\[\]]/g,'_');}
+function nomeKey(nome){return nome.replace(/[.#$\[\]/]/g,'_');}
 // Evita disparar várias reconciliações de snapDia em paralelo pro mesmo vendedor
 const _snapDiaReconciliando=new Set();
+let _snapDiaLoaded=false;
+function dataHojeUTC(){return new Date().toISOString().slice(0,10);}
+function _reconciliarSnapDiaChis(k, nome, baseCalculada, aplicarLocal=true){
+  const hoje=dataHoje(), dUTC=dataHojeUTC();
+  if(aplicarLocal) snapDia[k]={data:hoje,base:baseCalculada};
+  if(_snapDiaReconciliando.has(k)) return;
+  _snapDiaReconciliando.add(k);
+  runTransaction(ref(db,`equipe_danylo/snapDia/${k}`),current=>{
+    if(current && (current.data===hoje || current.data===dUTC)){
+      if(current.data===dUTC && current.data!==hoje) return {...current,data:hoje};
+      return; // já existe snapshot de hoje no servidor — preserva a base
+    }
+    return {data:hoje,base:baseCalculada,nome};
+  }).then(result=>{
+    if(result.snapshot.exists()) snapDia[k]={...result.snapshot.val(),data:hoje};
+  }).catch(()=>{}).finally(()=>{
+    _snapDiaReconciliando.delete(k);
+    if(aplicarLocal) render();
+  });
+}
 
 function getCotaDia(nome){
   const k=nomeKey(nome);
@@ -629,37 +649,17 @@ function vendasHojeVendedor(v){
   const k=nomeKey(v.nome);
   const totalAtual=v.s.reduce((a,b)=>a+b,0);
   const entry=snapDia[k];
-  const hoje=dataHoje();
+  const hoje=dataHoje(), dUTC=dataHojeUTC();
   let fromSemanas=0;
-  if(!entry){
-    // Nunca teve snapshot — cria com o total atual como base (0 vendas do dia)
-    snapDia[k]={data:hoje,base:totalAtual};
-    set(ref(db,`equipe_danylo/snapDia/${k}`),{data:hoje,base:totalAtual,nome:v.nome}).catch(()=>{});
-  }else if(entry.data!==hoje){
-    // Snapshot de dia anterior. Usa o total atual como base só NA MEMÓRIA LOCAL
-    // pra esta renderização não travar. NÃO grava direto no Firebase aqui: se
-    // já houve venda hoje, o CRM já escreveu (ou está prestes a escrever) o
-    // snapDia correto — com a base sendo o total de ONTEM, capturado antes de
-    // incrementar s[]. Gravar aqui com totalAtual (que já pode incluir a venda
-    // de hoje, se o listener do snapDia ainda não recebeu a escrita do CRM)
-    // apagava a base correta e zerava a "venda do dia" — era esse o bug: a
-    // venda só sobrava no total do mês porque o snapshot do dia era reiniciado
-    // em cima dela.
-    snapDia[k]={data:hoje,base:totalAtual};
-    if(!_snapDiaReconciliando.has(k)){
-      _snapDiaReconciliando.add(k);
-      runTransaction(ref(db,`equipe_danylo/snapDia/${k}`),current=>{
-        if(current && current.data===hoje){
-          return; // já existe snapshot de hoje no servidor — não mexe
-        }
-        return {data:hoje,base:totalAtual,nome:v.nome};
-      }).then(result=>{
-        if(result.snapshot.exists()) snapDia[k]={...result.snapshot.val()};
-      }).catch(()=>{}).finally(()=>{
-        _snapDiaReconciliando.delete(k);
-        render();
-      });
-    }
+  if(!_snapDiaLoaded){
+    return getCotaDia(v.nome);
+  }
+  const entryEhHoje = entry && (entry.data===hoje || entry.data===dUTC);
+  if(!entryEhHoje){
+    // Sem snapshot de hoje: usa totalAtual só na memória e reconcilia via
+    // transaction atômica — se o CRM acabou de gravar o snap pré-venda, aborta
+    // sem sobrescrever a base correta.
+    _reconciliarSnapDiaChis(k, v.nome, totalAtual, true);
   }else{
     fromSemanas=Math.max(0,totalAtual-entry.base);
   }
@@ -668,48 +668,44 @@ function vendasHojeVendedor(v){
 
 // Ao carregar: verifica snapshots antigos e renova para hoje
 function inicializarSnapDia(snapVal){
+  _snapDiaLoaded=true;
   const d=dataHoje();
-  // Data UTC de hoje — aceita como equivalente para compatibilidade com snapDias
-  // gravados antes da correção de fuso horário (ou por algum cliente sem fuso BRT)
-  const dUTC=new Date().toISOString().slice(0,10);
+  const dUTC=dataHojeUTC();
   dados.forEach(v=>{
     const k=nomeKey(v.nome);
     const entry=snapVal?.[k];
     const entryEhHoje = entry && (entry.data===d || entry.data===dUTC);
     if(entryEhHoje){
-      // Snapshot válido de hoje — usa sem modificar, normaliza a data para BRT
       snapDia[k]={...entry, data:d};
-      // Se estava em UTC, migra silenciosamente para BRT no Firebase
       if(entry.data===dUTC && entry.data!==d){
-        set(ref(db,`equipe_danylo/snapDia/${k}`),{...entry,data:d}).catch(()=>{});
+        runTransaction(ref(db,`equipe_danylo/snapDia/${k}`),current=>{
+          if(current && current.data===dUTC) return {...current,data:d};
+          return;
+        }).catch(()=>{});
       }
     }else{
-      // Sem snapshot de hoje: só grava na memória local
-      // NÃO regrava no Firebase — o CRM pode ter gravado o snapBase
-      // correto (pré-venda) logo antes de incrementar o s[].
-      // Só grava no Firebase se não existe entrada alguma (primeiro uso).
       const base=v.s.reduce((a,b)=>a+b,0);
       snapDia[k]={data:d,base};
       if(!entry){
-        set(ref(db,`equipe_danylo/snapDia/${k}`),{data:d,base,nome:v.nome}).catch(()=>{});
+        _reconciliarSnapDiaChis(k, v.nome, base, false);
       }
     }
   });
 }
 
-// Reset à meia-noite: atualiza o snapshot base para o total atual
+// Reset à meia-noite BRT (America/Sao_Paulo = UTC-3)
 function agendarResetMeiaNoite(){
   const agora=new Date();
-  const meianoite=new Date(agora);
-  meianoite.setHours(24,0,5,0); // 5s após meia-noite
-  const ms=meianoite-agora;
+  const agoraBRT=new Date(agora.toLocaleString('en-US',{timeZone:'America/Sao_Paulo'}));
+  const amanhaBRT=new Date(agoraBRT);
+  amanhaBRT.setDate(amanhaBRT.getDate()+1);
+  amanhaBRT.setHours(0,0,5,0); // 00:00:05 BRT do dia seguinte
+  const ms=Math.max(1000, amanhaBRT-agoraBRT);
   setTimeout(()=>{
-    const d=dataHoje();
     dados.forEach(v=>{
       const k=nomeKey(v.nome);
       const base=v.s.reduce((a,b)=>a+b,0);
-      snapDia[k]={data:d,base};
-      set(ref(db,`equipe_danylo/snapDia/${k}`),{data:d,base,nome:v.nome}).catch(()=>{});
+      _reconciliarSnapDiaChis(k, v.nome, base, true);
     });
     render();
     agendarResetMeiaNoite();
@@ -841,7 +837,8 @@ onValue(dbRef,snap=>{
     if(val.dados){
       dados=Object.entries(val.dados).map(([key,d])=>({
         nome:d.nome||key,
-        s:Array.isArray(d.s)?d.s:Array(config.semanas).fill(0)
+        s:Array.isArray(d.s)?d.s:Array(config.semanas).fill(0),
+        ...(d.conversao?{conversao:d.conversao}:{})
       }));
     }else{
       dados=config.vendedores.map(n=>({nome:n,s:Array(config.semanas).fill(0)}));
@@ -1058,7 +1055,7 @@ window.salvarAdmin=function(){
     const existing=dados.find(d=>d.nome===nomeAntigo)||dados.find(d=>d.nome===nome);
     const s=existing?[...existing.s]:Array(novasSemanas).fill(0);
     while(s.length<novasSemanas)s.push(0);
-    return{nome,s:s.slice(0,novasSemanas)};
+    return{nome,s:s.slice(0,novasSemanas),...(existing?.conversao?{conversao:existing.conversao}:{})};
   });
 
   config={...config,equipe:novaEquipe,mes:novoMes,semanas:novasSemanas,vendedores:novosNomes};
@@ -1066,7 +1063,10 @@ window.salvarAdmin=function(){
   document.getElementById('overlay').classList.remove('open');
   setSyncSaving();
   const dadosObj=Object.fromEntries(dados.map(d=>[nomeKey(d.nome),d]));
-  set(dbRef,{config,dados:dadosObj}).then(()=>{setSyncOk();render();}).catch(setSyncErr);
+  Promise.all([
+    set(ref(db,'equipe_danylo/config'),config),
+    set(ref(db,'equipe_danylo/dados'),dadosObj)
+  ]).then(()=>{setSyncOk();render();}).catch(setSyncErr);
 };
 
 window.repararSnapDiaHoje=function(){
